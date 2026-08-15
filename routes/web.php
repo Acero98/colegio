@@ -14,12 +14,17 @@ $rutas = [
     'dashboard' => ['DashboardController', 'index'],
     'personas' => ['PersonaController', 'index'],
     'personas_guardar' => ['PersonaController', 'guardar'],
+    'foto_persona' => ['PersonaController', 'mostrarFoto'],
     'alumnos' => ['AlumnoController', 'index'],
     'apoderados' => ['ApoderadoController', 'index'],
     'academico' => ['AcademicoController', 'index'],
     'academico_guardar' => ['AcademicoController', 'guardar'],
     'matriculas' => ['MatriculaController', 'index'],
     'matriculas_guardar' => ['MatriculaController', 'guardar'],
+    'fotochecks' => ['FotocheckController', 'index'],
+    'fotocheck_generar' => ['FotocheckController', 'generar'],
+    'fotocheck_ver' => ['FotocheckController', 'ver'],
+    'fotocheck_qr' => ['FotocheckController', 'imagenQr'],
 ];
 
 if (!isset($rutas[$url])) {

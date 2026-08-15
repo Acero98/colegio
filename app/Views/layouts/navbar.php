@@ -17,6 +17,7 @@
             <?php if (tienePermiso('apoderados.ver')): ?><a href="index.php?url=apoderados" class="nav-link"><i class="bi bi-person-hearts"></i> Apoderados</a><?php endif; ?>
             <?php if (tienePermiso('academico.ver')): ?><a href="index.php?url=academico" class="nav-link"><i class="bi bi-diagram-3"></i> Académico</a><?php endif; ?>
             <?php if (tienePermiso('matriculas.ver')): ?><a href="index.php?url=matriculas" class="nav-link"><i class="bi bi-journal-check"></i> Matrículas</a><?php endif; ?>
+            <?php if (tienePermiso('fotochecks.ver')): ?><a href="index.php?url=fotochecks" class="nav-link"><i class="bi bi-person-vcard"></i> Fotochecks</a><?php endif; ?>
             <span class="ml-2 border-l pl-3 text-xs text-slate-500"><?= htmlspecialchars($_SESSION['usuario']['nombre'] ?: $_SESSION['usuario']['rol']) ?></span>
             <a href="index.php?url=logout" class="nav-link text-red-600"><i class="bi bi-box-arrow-right"></i></a>
         </nav>
@@ -28,6 +29,7 @@
         <?php if (tienePermiso('apoderados.ver')): ?><a href="index.php?url=apoderados" class="mobile-link">Apoderados</a><?php endif; ?>
         <?php if (tienePermiso('academico.ver')): ?><a href="index.php?url=academico" class="mobile-link">Académico</a><?php endif; ?>
         <?php if (tienePermiso('matriculas.ver')): ?><a href="index.php?url=matriculas" class="mobile-link">Matrículas</a><?php endif; ?>
+        <?php if (tienePermiso('fotochecks.ver')): ?><a href="index.php?url=fotochecks" class="mobile-link">Fotochecks</a><?php endif; ?>
         <a href="index.php?url=logout" class="mobile-link text-red-600">Cerrar sesión</a>
     </nav>
 </header>

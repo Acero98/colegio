@@ -38,8 +38,8 @@ class PersonaModel
         try {
             $stmt = $this->db->prepare(
                 'INSERT INTO personas
-                (tipo_documento, numero_documento, nombres, apellidos, telefono, correo, estado, creado_en)
-                VALUES (:tipoDocumento, :numeroDocumento, :nombres, :apellidos, :telefono, :correo, "ACTIVO", NOW())'
+                (tipo_documento, numero_documento, nombres, apellidos, telefono, correo, fotografia, estado, creado_en)
+                VALUES (:tipoDocumento, :numeroDocumento, :nombres, :apellidos, :telefono, :correo, :fotografia, "ACTIVO", NOW())'
             );
             $stmt->execute([
                 ':tipoDocumento' => $data['tipo_documento'],
@@ -48,6 +48,7 @@ class PersonaModel
                 ':apellidos' => $data['apellidos'],
                 ':telefono' => $data['telefono'] ?: null,
                 ':correo' => $data['correo'] ?: null,
+                ':fotografia' => $data['fotografia'] ?: null,
             ]);
             $idPersona = (int) $this->db->lastInsertId();
             $perfilStmt = $this->db->prepare(
@@ -72,5 +73,13 @@ class PersonaModel
         );
         $stmt->execute([':tipo' => $tipo, ':numero' => $numero]);
         return (bool) $stmt->fetchColumn();
+    }
+
+    public function foto(int $idPersona): ?string
+    {
+        $stmt = $this->db->prepare('SELECT fotografia FROM personas WHERE id_persona=:id LIMIT 1');
+        $stmt->execute([':id' => $idPersona]);
+        $foto = $stmt->fetchColumn();
+        return $foto ?: null;
     }
 }

@@ -1,5 +1,7 @@
 config/local.php
 storage/fotos/*
 storage/documentos/*
+storage/qr/*
 !storage/fotos/.gitkeep
 !storage/documentos/.gitkeep
+!storage/qr/.gitkeep

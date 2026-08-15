@@ -104,7 +104,7 @@ CREATE TABLE calendario_institucional (
 
 CREATE TABLE codigos_qr (
   id_qr BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, id_persona BIGINT UNSIGNED NOT NULL,
-  token_hash CHAR(64) NOT NULL, version SMALLINT UNSIGNED NOT NULL DEFAULT 1,
+  token_hash CHAR(64) NOT NULL, archivo_qr VARCHAR(150) NOT NULL, version SMALLINT UNSIGNED NOT NULL DEFAULT 1,
   estado ENUM('ACTIVO','REVOCADO','VENCIDO') NOT NULL DEFAULT 'ACTIVO',
   emitido_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, vence_en DATETIME NULL, revocado_en DATETIME NULL,
   UNIQUE KEY uq_qr_token(token_hash), KEY ix_qr_persona(id_persona),
@@ -227,7 +227,7 @@ CREATE TABLE auditoria (
 
 INSERT INTO roles(nombre) VALUES ('Super Administrador'),('Administrador'),('Director'),('Responsable de asistencia'),('Responsable de cobros'),('Responsable de planilla'),('Docente'),('Apoderado'),('Consulta');
 INSERT INTO permisos(clave,descripcion) VALUES
-('personas.ver','Consultar personas'),('personas.crear','Registrar personas'),('alumnos.ver','Consultar alumnos'),('apoderados.ver','Consultar apoderados'),('academico.ver','Consultar estructura académica'),('academico.gestionar','Gestionar estructura académica'),('matriculas.ver','Consultar matrículas'),('matriculas.crear','Registrar matrículas'),
+('personas.ver','Consultar personas'),('personas.crear','Registrar personas'),('alumnos.ver','Consultar alumnos'),('apoderados.ver','Consultar apoderados'),('academico.ver','Consultar estructura académica'),('academico.gestionar','Gestionar estructura académica'),('matriculas.ver','Consultar matrículas'),('matriculas.crear','Registrar matrículas'),('fotochecks.ver','Consultar fotochecks'),('fotochecks.generar','Generar o renovar QR'),
 ('asistencia.escanear','Registrar asistencia QR'),('asistencia.modificar','Modificar asistencia calculada'),('cobros.gestionar','Gestionar cobros'),('planilla.calcular','Calcular planilla'),('planilla.cerrar','Cerrar periodos de planilla'),('reportes.ver','Consultar reportes'),('auditoria.ver','Consultar auditoría'),('configuracion.gestionar','Gestionar configuración');
 INSERT INTO rol_permiso(id_rol,id_permiso) SELECT 1,id_permiso FROM permisos;
 INSERT INTO institucion(id_institucion,nombre) VALUES(1,'Institución educativa') ON DUPLICATE KEY UPDATE nombre=nombre;
