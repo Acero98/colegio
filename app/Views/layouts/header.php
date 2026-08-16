@@ -10,7 +10,7 @@
     <link rel="stylesheet" href="<?= BASE_URL ?>assets/css/bootstrap-icons.min.css">
     <link rel="stylesheet" href="<?= BASE_URL ?>assets/css/output.css?v=<?= $versionAssets ?>">
     <link rel="stylesheet" href="<?= BASE_URL ?>assets/css/dataTables.dataTables.min.css?v=<?= @filemtime(__DIR__ . '/../../../public/assets/css/dataTables.dataTables.min.css') ?>">
-    <link rel="stylesheet" href="<?= BASE_URL ?>assets/css/app.css?v=<?= $versionAssets ?>">
+    <link rel="stylesheet" href="<?= BASE_URL ?>assets/css/app.css?v=<?= @filemtime(__DIR__ . '/../../../public/assets/css/app.css') ?>">
     <script defer src="<?= BASE_URL ?>assets/js/alpine.min.js"></script>
     <style>[x-cloak]{display:none!important}</style>
 </head>

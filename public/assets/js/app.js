@@ -1,4 +1,8 @@
 document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.sidebar-link').forEach((enlace) => {
+        if (!enlace.title) enlace.title = enlace.textContent.trim();
+    });
+
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('service-worker.js').catch(() => {});
     }
@@ -13,6 +17,42 @@ document.addEventListener('DOMContentLoaded', () => {
             position: 'top-end'
         });
     }
+
+    const plantillaEstadoPersona = document.getElementById('plantilla-estado-persona');
+    if (plantillaEstadoPersona) {
+        document.querySelectorAll('.btn-editar[data-id]').forEach((botonEditar) => {
+            const formularioEstado = plantillaEstadoPersona.content.firstElementChild.cloneNode(true);
+            const siguienteEstado = botonEditar.dataset.estado === 'ACTIVO' ? 'INACTIVO' : 'ACTIVO';
+            const botonEstado = formularioEstado.querySelector('.btn-estado');
+            formularioEstado.querySelector('[name="id_persona"]').value = botonEditar.dataset.id;
+            formularioEstado.querySelector('[name="estado"]').value = siguienteEstado;
+            botonEstado.classList.add(siguienteEstado === 'ACTIVO' ? 'btn-activar' : 'btn-desactivar');
+            botonEstado.title = siguienteEstado === 'ACTIVO' ? 'Activar persona' : 'Desactivar persona';
+            botonEstado.setAttribute('aria-label', botonEstado.title);
+            botonEstado.innerHTML = siguienteEstado === 'ACTIVO'
+                ? '<i class="bi bi-person-check-fill"></i>'
+                : '<i class="bi bi-person-x-fill"></i>';
+            botonEditar.after(formularioEstado);
+        });
+    }
+
+    const confirmaciones = {
+        guardar: { titulo: '¿Deseas guardar esta persona?', texto: 'Se registrará en la base institucional.', boton: 'Sí, guardar', color: '#2563eb' },
+        editar: { titulo: '¿Deseas guardar los cambios?', texto: 'Se actualizará la información de la persona.', boton: 'Sí, guardar cambios', color: '#fef3c7', claseBoton: 'swal-editar-confirmar' },
+        ACTIVAR: { titulo: '¿Deseas activar a esta persona?', texto: 'Volverá a estar disponible en el sistema.', boton: 'Sí, activar', color: '#059669' },
+        INACTIVO: { titulo: '¿Deseas desactivar a esta persona?', texto: 'Dejará de estar disponible para nuevos procesos.', boton: 'Sí, desactivar', color: '#dc2626' }
+    };
+    document.querySelectorAll('form[data-confirmar-accion]').forEach((formulario) => {
+        formulario.addEventListener('submit', async (evento) => {
+            evento.preventDefault();
+            const accion = formulario.dataset.confirmarAccion || formulario.querySelector('[name="estado"]')?.value;
+            const configuracion = confirmaciones[accion] || confirmaciones.editar;
+            const confirmado = window.Swal
+                ? (await Swal.fire({ icon: 'question', title: configuracion.titulo, text: configuracion.texto, showCancelButton: true, confirmButtonText: configuracion.boton, cancelButtonText: 'Cancelar', confirmButtonColor: configuracion.color, customClass: configuracion.claseBoton ? { confirmButton: configuracion.claseBoton } : {} })).isConfirmed
+                : window.confirm(configuracion.titulo);
+            if (confirmado) HTMLFormElement.prototype.submit.call(formulario);
+        });
+    });
 
     document.querySelectorAll('[id^="modal-"] form').forEach((formulario) => {
         const yaTieneCancelar = Array.from(formulario.querySelectorAll('button')).some((boton) =>
@@ -60,7 +100,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (tablaAlumnos) {
             tablaAlumnos.id = 'tabla-alumnos';
             tablaAlumnos.dataset.datatable = '';
-            tablaAlumnos.dataset.lengthMenu = '10,25,50';
+            tablaAlumnos.dataset.pageOptions = '5,10,25,50';
 
             const filaVacia = tablaAlumnos.querySelector('tbody tr td[colspan]')?.closest('tr');
             filaVacia?.remove();
@@ -69,10 +109,36 @@ document.addEventListener('DOMContentLoaded', () => {
             if (encabezadoAlumnos && !encabezadoAlumnos.querySelector('[data-columna-numero]')) {
                 const columnaNumero = document.createElement('th');
                 columnaNumero.dataset.columnaNumero = 'true';
-                columnaNumero.className = 'px-5 py-4';
+                columnaNumero.className = 'no-sort px-5 py-4';
                 columnaNumero.textContent = 'N°';
                 encabezadoAlumnos.prepend(columnaNumero);
                 tablaAlumnos.querySelectorAll('tbody tr').forEach((fila, indice) => {
+                    const numero = document.createElement('td');
+                    numero.className = 'px-5 py-4 text-slate-500';
+                    numero.textContent = String(indice + 1);
+                    fila.prepend(numero);
+                    fila.classList.add('transition', 'hover:bg-slate-50');
+                });
+            }
+        }
+
+        const tablaApoderados = document.querySelector('#contenedor-tabla-apoderados table');
+        if (tablaApoderados) {
+            tablaApoderados.id = 'tabla-apoderados';
+            tablaApoderados.dataset.datatable = '';
+            tablaApoderados.dataset.pageOptions = '5,10,25,50';
+
+            const filaVacia = tablaApoderados.querySelector('tbody tr td[colspan]')?.closest('tr');
+            filaVacia?.remove();
+
+            const encabezadoApoderados = tablaApoderados.querySelector('thead tr');
+            if (encabezadoApoderados && !encabezadoApoderados.querySelector('[data-columna-numero]')) {
+                const columnaNumero = document.createElement('th');
+                columnaNumero.dataset.columnaNumero = 'true';
+                columnaNumero.className = 'no-sort px-5 py-4';
+                columnaNumero.textContent = 'N°';
+                encabezadoApoderados.prepend(columnaNumero);
+                tablaApoderados.querySelectorAll('tbody tr').forEach((fila, indice) => {
                     const numero = document.createElement('td');
                     numero.className = 'px-5 py-4 text-slate-500';
                     numero.textContent = String(indice + 1);
@@ -108,20 +174,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             }
         }
-        const cuerpoPersonas = document.getElementById('lista-personas');
-        if (cuerpoPersonas) {
-            const tablaPersonas = cuerpoPersonas.closest('table');
-            if (tablaPersonas && !tablas.includes(tablaPersonas)) tablas.push(tablaPersonas);
-            cuerpoPersonas.querySelectorAll('tr').forEach((fila) => { fila.style.display = ''; });
-            document.getElementById('buscar-personas')?.closest('.border-b')?.remove();
-            document.getElementById('resumen-personas')?.remove();
-        }
         tablas.forEach((tabla) => {
+            const filaVacia = tabla.querySelector('tbody tr td[colspan]')?.closest('tr');
+            filaVacia?.remove();
+
             const ultimaColumna = tabla.querySelector('thead th:last-child');
             if (ultimaColumna && ['', 'acciones'].includes(ultimaColumna.textContent.trim().toLowerCase())) {
                 ultimaColumna.classList.add('no-sort');
             }
-            const opcionesTamano = (tabla.dataset.lengthMenu || '10,25,50,100')
+            const opcionesTamano = (tabla.dataset.pageOptions || '10,25,50,100')
                 .split(',')
                 .map(Number)
                 .filter(Number.isFinite);

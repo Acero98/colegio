@@ -89,8 +89,54 @@ class PersonaController
     public function actualizar(): void
     {
         autorizar('personas.crear'); validarCsrf(); global $conexion;
-        try { (new PersonaModel($conexion))->actualizar($_POST,$_POST['perfiles']??[]); (new AuditoriaService($conexion))->registrar($_POST['estado']==='INACTIVO'?'DESACTIVAR':'EDITAR','personas',(int)$_POST['id_persona']); mensaje('success','Persona actualizada correctamente.'); }
-        catch(Throwable $e){ mensaje('error','No se pudo actualizar. Verifique que el documento no esté duplicado.'); }
-        header('Location:index.php?url=personas');exit;
+        try {
+            $fotografia = $this->guardarFotografiaOpcional();
+            (new PersonaModel($conexion))->actualizar($_POST, $_POST['perfiles'] ?? [], $fotografia);
+            (new AuditoriaService($conexion))->registrar('EDITAR', 'personas', (int) $_POST['id_persona']);
+            mensaje('success', 'Persona actualizada correctamente.');
+        } catch (Throwable $e) {
+            mensaje('error', 'No se pudo actualizar. Verifique que el documento no esté duplicado.');
+        }
+        header('Location:index.php?url=personas'); exit;
+    }
+
+    private function guardarFotografiaOpcional(): ?string
+    {
+        if (empty($_FILES['fotografia']['name'])) {
+            return null;
+        }
+        $archivo = $_FILES['fotografia'];
+        $permitidos = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp'];
+        if ($archivo['error'] !== UPLOAD_ERR_OK || $archivo['size'] > 2 * 1024 * 1024) {
+            throw new RuntimeException('La fotografía debe ser JPG, PNG o WEBP y pesar como máximo 2 MB.');
+        }
+        $mime = (new finfo(FILEINFO_MIME_TYPE))->file($archivo['tmp_name']);
+        if (!isset($permitidos[$mime])) {
+            throw new RuntimeException('La fotografía debe ser JPG, PNG o WEBP y pesar como máximo 2 MB.');
+        }
+        $nombre = bin2hex(random_bytes(16)) . '.' . $permitidos[$mime];
+        if (!move_uploaded_file($archivo['tmp_name'], __DIR__ . '/../../storage/fotos/' . $nombre)) {
+            throw new RuntimeException('No se pudo guardar la fotografía.');
+        }
+        return $nombre;
+    }
+
+    public function cambiarEstado(): void
+    {
+        autorizar('personas.crear'); validarCsrf(); global $conexion;
+        $idPersona = (int) ($_POST['id_persona'] ?? 0);
+        $estado = $_POST['estado'] ?? '';
+        if ($idPersona < 1 || !in_array($estado, ['ACTIVO', 'INACTIVO'], true)) {
+            mensaje('error', 'No se pudo cambiar el estado de la persona.');
+        } else {
+            try {
+                (new PersonaModel($conexion))->cambiarEstado($idPersona, $estado);
+                (new AuditoriaService($conexion))->registrar($estado === 'ACTIVO' ? 'ACTIVAR' : 'DESACTIVAR', 'personas', $idPersona);
+                mensaje('success', $estado === 'ACTIVO' ? 'Persona activada correctamente.' : 'Persona desactivada correctamente.');
+            } catch (Throwable $e) {
+                mensaje('error', 'No se pudo cambiar el estado de la persona.');
+            }
+        }
+        header('Location:index.php?url=personas'); exit;
     }
 }

@@ -83,16 +83,32 @@ class PersonaModel
         return $foto ?: null;
     }
 
-    public function actualizar(array $data, array $perfiles): void
+    public function actualizar(array $data, array $perfiles, ?string $fotografia = null): void
     {
         $id=(int)$data['id_persona'];if($id<1||!$perfiles)throw new RuntimeException('Complete la persona y al menos un perfil.');
         $this->db->beginTransaction();
         try {
-            $stmt=$this->db->prepare('UPDATE personas SET tipo_documento=?,numero_documento=?,nombres=?,apellidos=?,telefono=?,correo=?,estado=? WHERE id_persona=?');
-            $stmt->execute([$data['tipo_documento'],$data['numero_documento'],$data['nombres'],$data['apellidos'],$data['telefono']?:null,$data['correo']?:null,$data['estado'],$id]);
+            $sql = 'UPDATE personas SET tipo_documento=?,numero_documento=?,nombres=?,apellidos=?,telefono=?,correo=?';
+            $valores = [$data['tipo_documento'], $data['numero_documento'], $data['nombres'], $data['apellidos'], $data['telefono'] ?: null, $data['correo'] ?: null];
+            if ($fotografia !== null) {
+                $sql .= ', fotografia=?';
+                $valores[] = $fotografia;
+            }
+            $sql .= ' WHERE id_persona=?';
+            $valores[] = $id;
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute($valores);
             $this->db->prepare('UPDATE persona_perfiles SET estado="INACTIVO" WHERE id_persona=?')->execute([$id]);
             foreach(array_unique($perfiles) as $tipo){$this->db->prepare('INSERT INTO persona_perfiles(id_persona,tipo,estado,creado_en) VALUES(? ,?,"ACTIVO",NOW()) ON DUPLICATE KEY UPDATE estado="ACTIVO"')->execute([$id,$tipo]);}
             $this->db->commit();
         } catch(Throwable $e){$this->db->rollBack();throw $e;}
+    }
+    public function cambiarEstado(int $idPersona, string $estado): void
+    {
+        $stmt = $this->db->prepare('UPDATE personas SET estado = ? WHERE id_persona = ?');
+        $stmt->execute([$estado, $idPersona]);
+        if ($stmt->rowCount() === 0) {
+            throw new RuntimeException('Persona no encontrada.');
+        }
     }
 }

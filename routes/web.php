@@ -27,6 +27,7 @@ $rutas = [
     'personas' => ['PersonaController', 'index'],
     'personas_guardar' => ['PersonaController', 'guardar'],
     'personas_actualizar' => ['PersonaController', 'actualizar'],
+    'personas_cambiar_estado' => ['PersonaController', 'cambiarEstado'],
     'foto_persona' => ['PersonaController', 'mostrarFoto'],
     'alumnos' => ['AlumnoController', 'index'],
     'apoderados' => ['ApoderadoController', 'index'],
