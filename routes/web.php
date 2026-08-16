@@ -1,6 +1,12 @@
 <?php
 
-$url = $_GET['url'] ?? (autenticado() ? 'dashboard' : 'login');
+// URL canónica: el dashboard se accede únicamente mediante ?url=dashboard.
+if (!isset($_GET['url'])) {
+    header('Location: index.php?url=dashboard', true, 302);
+    exit;
+}
+
+$url = $_GET['url'];
 $publicas = ['login', 'auth'];
 
 if (!in_array($url, $publicas, true)) {
@@ -20,6 +26,7 @@ $rutas = [
     'roles_guardar' => ['RolController', 'guardar'],
     'personas' => ['PersonaController', 'index'],
     'personas_guardar' => ['PersonaController', 'guardar'],
+    'personas_actualizar' => ['PersonaController', 'actualizar'],
     'foto_persona' => ['PersonaController', 'mostrarFoto'],
     'alumnos' => ['AlumnoController', 'index'],
     'apoderados' => ['ApoderadoController', 'index'],

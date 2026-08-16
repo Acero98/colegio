@@ -1,0 +1,6 @@
+@import "tailwindcss";
+
+/* Rutas que Tailwind debe revisar para generar las clases utilizadas. */
+@source "../../../app/Views";
+@source "../js/app.js";
+@source "../js/asistencia-escanear.js";

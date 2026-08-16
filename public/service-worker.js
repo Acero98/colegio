@@ -1,1 +1,28 @@
-const CACHE='colegio-asistencia-v1';const ASSETS=['./','./assets/css/output.css','./assets/css/app.css','./assets/css/inter.css','./assets/css/bootstrap-icons.min.css','./assets/js/alpine.min.js','./assets/js/html5-qrcode.min.js','./assets/js/asistencia-escanear.js'];self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS))));self.addEventListener('fetch',e=>{if(e.request.method==='GET')e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request)));});
+const CACHE = 'colegio-estaticos-v2';
+const ESTATICOS = [
+  './assets/css/output.css',
+  './assets/css/app.css',
+  './assets/css/inter.css',
+  './assets/css/bootstrap-icons.min.css',
+  './assets/js/alpine.min.js',
+  './assets/js/html5-qrcode.min.js',
+  './assets/js/asistencia-escanear.js'
+];
+
+self.addEventListener('install', (evento) => {
+  evento.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(ESTATICOS)).then(() => self.skipWaiting()));
+});
+
+self.addEventListener('activate', (evento) => {
+  evento.waitUntil(caches.keys().then((nombres) => Promise.all(nombres.filter((nombre) => nombre !== CACHE).map((nombre) => caches.delete(nombre)))).then(() => self.clients.claim()));
+});
+
+self.addEventListener('fetch', (evento) => {
+  if (evento.request.method !== 'GET') return;
+  // Las vistas PHP y sus datos nunca se sirven desde caché: siempre muestran la versión actual.
+  if (evento.request.mode === 'navigate' || evento.request.url.includes('index.php')) {
+    evento.respondWith(fetch(evento.request));
+    return;
+  }
+  evento.respondWith(caches.match(evento.request).then((respuesta) => respuesta || fetch(evento.request)));
+});

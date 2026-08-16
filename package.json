@@ -1,5 +1,15 @@
 {
+  "scripts": {
+    "tailwind:watch": "tailwindcss -i ./public/assets/css/tailwind.input.css -o ./public/assets/css/output.css --watch",
+    "tailwind:build": "tailwindcss -i ./public/assets/css/tailwind.input.css -o ./public/assets/css/output.css --minify"
+  },
   "dependencies": {
+    "datatables.net": "^2.3.5",
+    "datatables.net-dt": "^2.3.5",
     "html5-qrcode": "^2.3.8"
+  },
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.3.3",
+    "tailwindcss": "^4.3.3"
   }
 }

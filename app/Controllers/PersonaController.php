@@ -85,4 +85,12 @@ class PersonaController
         readfile($ruta);
         exit;
     }
+
+    public function actualizar(): void
+    {
+        autorizar('personas.crear'); validarCsrf(); global $conexion;
+        try { (new PersonaModel($conexion))->actualizar($_POST,$_POST['perfiles']??[]); (new AuditoriaService($conexion))->registrar($_POST['estado']==='INACTIVO'?'DESACTIVAR':'EDITAR','personas',(int)$_POST['id_persona']); mensaje('success','Persona actualizada correctamente.'); }
+        catch(Throwable $e){ mensaje('error','No se pudo actualizar. Verifique que el documento no esté duplicado.'); }
+        header('Location:index.php?url=personas');exit;
+    }
 }
