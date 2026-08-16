@@ -51,4 +51,13 @@ class UsuarioModel
         if(trim($d['usuario']??'')===''||strlen((string)($d['contrasena']??''))<8||empty($d['id_rol']))throw new RuntimeException('Complete usuario, rol y una contraseña de al menos 8 caracteres.');
         $this->db->beginTransaction();try{$s=$this->db->prepare("INSERT INTO usuarios(id_persona,usuario,contrasena,estado) VALUES(?,?,?,'ACTIVO')");$s->execute([$d['id_persona']!==''?(int)$d['id_persona']:null,trim($d['usuario']),password_hash($d['contrasena'],PASSWORD_DEFAULT)]);$id=(int)$this->db->lastInsertId();$this->db->prepare('INSERT INTO usuario_rol(id_usuario,id_rol) VALUES(?,?)')->execute([$id,(int)$d['id_rol']]);$this->db->commit();return $id;}catch(Throwable $e){$this->db->rollBack();throw $e;}
     }
+
+    public function actualizar(array $d): void
+    {
+        $id=(int)$d['id_usuario'];if($id<1||trim($d['usuario']??'')===''||empty($d['id_rol']))throw new RuntimeException('Datos incompletos.');
+        $this->db->beginTransaction();try{
+            $sql='UPDATE usuarios SET usuario=?,estado=?';$p=[trim($d['usuario']),$d['estado']];if(!empty($d['contrasena'])){$sql.=',contrasena=?';$p[]=password_hash($d['contrasena'],PASSWORD_DEFAULT);}$sql.=' WHERE id_usuario=?';$p[]=$id;$this->db->prepare($sql)->execute($p);
+            $this->db->prepare('DELETE FROM usuario_rol WHERE id_usuario=?')->execute([$id]);$this->db->prepare('INSERT INTO usuario_rol(id_usuario,id_rol) VALUES(?,?)')->execute([$id,(int)$d['id_rol']]);$this->db->commit();
+        }catch(Throwable $e){$this->db->rollBack();throw $e;}
+    }
 }

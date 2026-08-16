@@ -5,10 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#2563eb">
     <title><?= htmlspecialchars(SISTEMA_NOMBRE) ?></title>
+    <?php $versionAssets = (string) @filemtime(__DIR__ . '/../../../public/assets/css/app.css'); ?>
     <link rel="stylesheet" href="<?= BASE_URL ?>assets/css/inter.css">
     <link rel="stylesheet" href="<?= BASE_URL ?>assets/css/bootstrap-icons.min.css">
-    <link rel="stylesheet" href="<?= BASE_URL ?>assets/css/output.css">
-    <link rel="stylesheet" href="<?= BASE_URL ?>assets/css/app.css">
+    <link rel="stylesheet" href="<?= BASE_URL ?>assets/css/output.css?v=<?= $versionAssets ?>">
+    <link rel="stylesheet" href="<?= BASE_URL ?>assets/css/app.css?v=<?= $versionAssets ?>">
     <script defer src="<?= BASE_URL ?>assets/js/alpine.min.js"></script>
     <style>[x-cloak]{display:none!important}</style>
 </head>

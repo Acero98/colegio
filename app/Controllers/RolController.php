@@ -1,0 +1,3 @@
+<?php
+require_once __DIR__.'/../../config/conexion.php';require_once __DIR__.'/../Models/RolModel.php';
+class RolController {public function index():void{autorizar('usuarios.gestionar');global $conexion;$d=(new RolModel($conexion))->datos();extract($d);require __DIR__.'/../Views/layouts/header.php';require __DIR__.'/../Views/layouts/navbar.php';require __DIR__.'/../Views/usuarios/roles.php';require __DIR__.'/../Views/layouts/footer.php';}public function guardar():void{autorizar('usuarios.gestionar');validarCsrf();global $conexion;try{(new RolModel($conexion))->guardar($_POST);mensaje('success','Rol y permisos guardados.');}catch(Throwable $e){mensaje('error','No se pudo guardar el rol.');}header('Location:index.php?url=roles_permisos');exit;}}
