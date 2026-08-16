@@ -14,7 +14,7 @@ class MatriculaModel
         $personas = new PersonaModel($this->db);
         return [
             'periodos' => $this->db->query("SELECT * FROM periodos_academicos WHERE estado='ACTIVO' ORDER BY fecha_inicio DESC")->fetchAll(),
-            'secciones' => $this->db->query("SELECT s.id_seccion, CONCAT(n.nombre, ' · ', g.nombre, ' ', s.nombre) AS nombre FROM secciones s INNER JOIN grados g ON g.id_grado=s.id_grado INNER JOIN niveles n ON n.id_nivel=g.id_nivel WHERE s.estado='ACTIVO' ORDER BY n.orden,g.orden,s.nombre")->fetchAll(),
+            'secciones' => $this->db->query("SELECT s.id_seccion, CONCAT(n.nombre, ' · ', g.nombre, ' ', s.nombre) AS nombre, s.capacidad, (SELECT COUNT(*) FROM matriculas m WHERE m.id_seccion=s.id_seccion AND m.estado='ACTIVO' AND m.id_periodo_academico IN (SELECT id_periodo_academico FROM periodos_academicos WHERE estado='ACTIVO')) AS matriculados FROM secciones s INNER JOIN grados g ON g.id_grado=s.id_grado INNER JOIN niveles n ON n.id_nivel=g.id_nivel WHERE s.estado='ACTIVO' ORDER BY n.orden,g.orden,s.nombre")->fetchAll(),
             'alumnos' => $personas->listar('ALUMNO'),
             'apoderados' => $personas->listar('APODERADO'),
         ];
@@ -29,6 +29,19 @@ class MatriculaModel
     {
         $this->db->beginTransaction();
         try {
+            $cupo = $this->db->prepare('SELECT capacidad FROM secciones WHERE id_seccion=:seccion AND estado="ACTIVO" FOR UPDATE');
+            $cupo->execute([':seccion' => $data['id_seccion']]);
+            $capacidad = $cupo->fetchColumn();
+            if ($capacidad === false) {
+                throw new DomainException('La sección seleccionada no está disponible.');
+            }
+            if ($capacidad !== null) {
+                $ocupacion = $this->db->prepare('SELECT COUNT(*) FROM matriculas WHERE id_seccion=:seccion AND id_periodo_academico=:periodo AND estado="ACTIVO"');
+                $ocupacion->execute([':seccion' => $data['id_seccion'], ':periodo' => $data['id_periodo']]);
+                if ((int) $ocupacion->fetchColumn() >= (int) $capacidad) {
+                    throw new DomainException('La sección alcanzó su capacidad máxima. Seleccione otra sección o amplíe su cupo.');
+                }
+            }
             $codigo = trim($data['codigo_alumno']);
             if ($codigo === '') {
                 $anio = date('Y', strtotime($data['fecha_matricula']));

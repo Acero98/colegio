@@ -33,4 +33,35 @@ class AcademicoController
         header('Location: index.php?url=academico');
         exit;
     }
+
+    public function actualizar(): void
+    {
+        autorizar('academico.gestionar'); validarCsrf();
+        $entidad = $_POST['entidad'] ?? '';
+        global $conexion;
+        try {
+            (new AcademicoModel($conexion))->actualizar($entidad, $_POST);
+            (new AuditoriaService($conexion))->registrar('EDITAR', 'academico_' . $entidad, (int) ($_POST['id'] ?? 0), null, $_POST);
+            mensaje('success', 'Registro académico actualizado.');
+        } catch (Throwable $e) {
+            mensaje('error', 'No se pudo actualizar. Verifique los datos y que no estén duplicados.');
+        }
+        header('Location: index.php?url=academico'); exit;
+    }
+
+    public function cambiarEstado(): void
+    {
+        autorizar('academico.gestionar'); validarCsrf();
+        $entidad = $_POST['entidad'] ?? '';
+        $estado = $_POST['estado'] ?? '';
+        global $conexion;
+        try {
+            (new AcademicoModel($conexion))->cambiarEstado($entidad, (int) ($_POST['id'] ?? 0), $estado);
+            (new AuditoriaService($conexion))->registrar($estado === 'ACTIVO' ? 'ACTIVAR' : 'DESACTIVAR', 'academico_' . $entidad, (int) ($_POST['id'] ?? 0));
+            mensaje('success', $estado === 'ACTIVO' ? 'Registro activado.' : 'Registro desactivado.');
+        } catch (Throwable $e) {
+            mensaje('error', 'No se pudo cambiar el estado del registro.');
+        }
+        header('Location: index.php?url=academico'); exit;
+    }
 }

@@ -40,8 +40,19 @@ document.addEventListener('DOMContentLoaded', () => {
         guardar: { titulo: '¿Deseas guardar esta persona?', texto: 'Se registrará en la base institucional.', boton: 'Sí, guardar', color: '#2563eb' },
         editar: { titulo: '¿Deseas guardar los cambios?', texto: 'Se actualizará la información de la persona.', boton: 'Sí, guardar cambios', color: '#fef3c7', claseBoton: 'swal-editar-confirmar' },
         ACTIVAR: { titulo: '¿Deseas activar a esta persona?', texto: 'Volverá a estar disponible en el sistema.', boton: 'Sí, activar', color: '#059669' },
-        INACTIVO: { titulo: '¿Deseas desactivar a esta persona?', texto: 'Dejará de estar disponible para nuevos procesos.', boton: 'Sí, desactivar', color: '#dc2626' }
+        INACTIVO: { titulo: '¿Deseas desactivar a esta persona?', texto: 'Dejará de estar disponible para nuevos procesos.', boton: 'Sí, desactivar', color: '#dc2626' },
+        'academico-guardar': { titulo: '¿Deseas agregar este registro académico?', texto: 'Se incorporará a la estructura académica.', boton: 'Sí, agregar', color: '#2563eb' },
+        'academico-editar': { titulo: '¿Deseas guardar los cambios?', texto: 'Se actualizará la estructura académica.', boton: 'Sí, guardar cambios', color: '#d97706' },
+        'academico-activar': { titulo: '¿Deseas activar este registro?', texto: 'Volverá a estar disponible para su uso.', boton: 'Sí, activar', color: '#059669' },
+        'academico-desactivar': { titulo: '¿Deseas desactivar este registro?', texto: 'No estará disponible para nuevos procesos.', boton: 'Sí, desactivar', color: '#dc2626' },
+        'matricula-guardar': { titulo: '¿Deseas registrar esta matrícula?', texto: 'Se validará el cupo disponible de la sección.', boton: 'Sí, matricular', color: '#2563eb' }
     };
+    document.querySelectorAll('form[action*="academico_guardar"]').forEach((formulario) => { formulario.dataset.confirmarAccion = 'academico-guardar'; });
+    document.querySelectorAll('form[action*="academico_actualizar"]').forEach((formulario) => { formulario.dataset.confirmarAccion = 'academico-editar'; });
+    document.querySelectorAll('form[action*="academico_cambiar_estado"]').forEach((formulario) => {
+        formulario.dataset.confirmarAccion = formulario.querySelector('[name="estado"]')?.value === 'ACTIVO' ? 'academico-activar' : 'academico-desactivar';
+    });
+    document.querySelectorAll('form[action*="matriculas_guardar"]').forEach((formulario) => { formulario.dataset.confirmarAccion = 'matricula-guardar'; });
     document.querySelectorAll('form[data-confirmar-accion]').forEach((formulario) => {
         formulario.addEventListener('submit', async (evento) => {
             evento.preventDefault();

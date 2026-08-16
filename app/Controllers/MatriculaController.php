@@ -37,6 +37,8 @@ class MatriculaController
             $id = (new MatriculaModel($conexion))->crear($_POST);
             (new AuditoriaService($conexion))->registrar('CREAR', 'matriculas', $id, null, $_POST);
             mensaje('success', 'Matrícula registrada correctamente.');
+        } catch (DomainException $e) {
+            mensaje('warning', $e->getMessage());
         } catch (Throwable $e) {
             mensaje('error', 'No se pudo registrar la matrícula. El alumno podría ya estar matriculado en este periodo.');
         }
