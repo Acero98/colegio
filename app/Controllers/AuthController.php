@@ -37,7 +37,7 @@ class AuthController
             'permisos' => $model->permisos((int) $registro['id_usuario']),
         ];
         (new AuditoriaService($conexion))->registrar('INICIO_SESION', 'usuarios', (int) $registro['id_usuario']);
-        header('Location: index.php?url=dashboard');
+        header('Location: index.php?url=' . ($registro['nombre'] === 'Apoderado' ? 'portal_familia' : 'dashboard'));
         exit;
     }
 
