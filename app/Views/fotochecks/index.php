@@ -11,7 +11,7 @@
                     <th class="px-5 py-4">Persona</th>
                     <th class="px-5 py-4">Perfil</th>
                     <th class="px-5 py-4">Código / documento</th>
-                    <th class="px-5 py-4">Sección / función</th>
+                    <th class="px-5 py-4">Sección / cargo</th>
                     <th class="px-5 py-4">QR</th>
                     <th class="no-sort px-5 py-4 text-right">Acciones</th>
                 </tr>

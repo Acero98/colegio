@@ -14,9 +14,10 @@ CREATE TABLE personas (
   numero_documento VARCHAR(25) NOT NULL, nombres VARCHAR(120) NOT NULL,
   apellidos VARCHAR(120) NOT NULL, fecha_nacimiento DATE NULL, sexo ENUM('F','M','OTRO') NULL,
   telefono VARCHAR(30) NULL, correo VARCHAR(150) NULL, direccion VARCHAR(250) NULL,
-  fotografia VARCHAR(250) NULL, estado ENUM('ACTIVO','INACTIVO') NOT NULL DEFAULT 'ACTIVO',
+  fotografia VARCHAR(250) NULL, codigo_trabajador VARCHAR(20) NULL, estado ENUM('ACTIVO','INACTIVO') NOT NULL DEFAULT 'ACTIVO',
   creado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, actualizado_en DATETIME NULL,
-  UNIQUE KEY uq_persona_documento (tipo_documento, numero_documento)
+  UNIQUE KEY uq_persona_documento (tipo_documento, numero_documento),
+  UNIQUE KEY uq_persona_codigo_trabajador (codigo_trabajador)
 ) ENGINE=InnoDB;
 
 CREATE TABLE persona_perfiles (

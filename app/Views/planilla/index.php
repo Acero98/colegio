@@ -4,7 +4,7 @@
         <h1 class="text-2xl font-bold">Planilla</h1>
         <p class="mt-1 text-sm text-slate-500">Configure vínculos, periodos y descuentos automáticos.</p>
     </div>
-    <div class="flex gap-2"><button onclick="document.getElementById('modal-regla').classList.remove('hidden')" class="rounded-xl border bg-white px-4 py-2 text-sm font-semibold">Reglas</button><button onclick="document.getElementById('modal-periodo').classList.remove('hidden')" class="rounded-xl border bg-white px-4 py-2 text-sm font-semibold">Nuevo periodo</button><button onclick="document.getElementById('modal-vinculo').classList.remove('hidden')" class="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white">Vínculo laboral</button></div>
+    <div class="flex gap-2"><a href="index.php?url=vinculos_laborales" class="rounded-xl border border-violet-200 bg-violet-50 px-4 py-2 text-sm font-semibold text-violet-700">Vínculos laborales</a><button onclick="document.getElementById('modal-regla').classList.remove('hidden')" class="rounded-xl border bg-white px-4 py-2 text-sm font-semibold">Reglas</button><button onclick="document.getElementById('modal-periodo').classList.remove('hidden')" class="rounded-xl border bg-white px-4 py-2 text-sm font-semibold">Nuevo periodo</button><button onclick="document.getElementById('modal-vinculo').classList.remove('hidden')" class="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white">Vínculo laboral</button></div>
 </div>
 <section class="mb-6 overflow-hidden rounded-2xl border bg-white">
     <table class="min-w-full text-sm">
@@ -54,7 +54,7 @@
             </select><select name="tipo" class="form-input">
                 <option>DOCENTE</option>
                 <option>ADMINISTRATIVO</option>
-            </select><select name="modalidad_pago" class="form-input">
+            </select><label class="form-label">Cargo<input required name="cargo" placeholder="Ej. Docente de primaria" class="form-input"></label><select name="modalidad_pago" class="form-input">
                 <option>MENSUAL</option>
                 <option>HORA</option>
                 <option>SESION</option>

@@ -207,8 +207,8 @@ $periodoInstitucional = defined('INSTITUCION_PERIODO') ? INSTITUCION_PERIODO : d
         }
 
         .dato b {
-            display: inline-block;
-            min-width: 10.5mm;
+            display: block;
+            margin-bottom: .25mm;
             color: #1e3a8a;
             font-weight: 800;
         }
@@ -337,8 +337,8 @@ $periodoInstitucional = defined('INSTITUCION_PERIODO') ? INSTITUCION_PERIODO : d
                 </div>
                 <div class="datos">
                     <div class="nombre"><?= htmlspecialchars($alumno['nombres'] . ' ' . $alumno['apellidos']) ?></div>
-                    <p class="dato"><b><?= ($alumno['tipo_fotocheck'] ?? 'ALUMNO') === 'ALUMNO' ? 'Código' : 'Documento' ?></b><?= htmlspecialchars($alumno['codigo_alumno']) ?></p>
-                    <p class="dato"><b><?= ($alumno['tipo_fotocheck'] ?? 'ALUMNO') === 'ALUMNO' ? 'Sección' : 'Función' ?></b><?= htmlspecialchars($alumno['seccion']) ?></p>
+                    <p class="dato"><b><?= ($alumno['tipo_fotocheck'] ?? 'ALUMNO') === 'ALUMNO' ? 'Código' : 'Código trabajador' ?></b><?= htmlspecialchars($alumno['codigo_alumno']) ?></p>
+                    <p class="dato"><b><?= ($alumno['tipo_fotocheck'] ?? 'ALUMNO') === 'ALUMNO' ? 'Sección' : 'Cargo' ?></b><?= htmlspecialchars($alumno['seccion']) ?></p>
                     <p class="dato"><b>Documento</b><?= htmlspecialchars($alumno['numero_documento']) ?></p>
                 </div>
                 <div class="qr-bloque">

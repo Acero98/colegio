@@ -11,8 +11,11 @@ class PersonaModel
 
     public function listar(?string $tipo = null): array
     {
-        $sql = 'SELECT p.id_persona, p.tipo_documento, p.numero_documento, p.nombres,
+        $sql = 'SELECT p.id_persona, p.tipo_documento, p.numero_documento, p.codigo_trabajador, p.nombres,
                        p.apellidos, p.telefono, p.correo, p.estado,
+                       (SELECT GROUP_CONCAT(DISTINCT COALESCE(c.nombre, v.tipo) ORDER BY c.nombre SEPARATOR ", ")
+                        FROM vinculos_laborales v LEFT JOIN cargos c ON c.id_cargo=v.id_cargo
+                        WHERE v.id_persona=p.id_persona AND v.estado="ACTIVO") AS cargo,
                        GROUP_CONCAT(pp.tipo ORDER BY pp.tipo SEPARATOR ", ") AS perfiles
                 FROM personas p
                 LEFT JOIN persona_perfiles pp ON pp.id_persona = p.id_persona

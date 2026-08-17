@@ -56,6 +56,7 @@ document.addEventListener('DOMContentLoaded', () => {
         'horario-desactivar': { titulo: '¿Deseas desactivar esta jornada?', texto: 'Dejará de permitir nuevas marcaciones.', boton: 'Sí, desactivar', color: '#dc2626' },
         'horario-eliminar': { titulo: '¿Deseas desactivar esta sesión?', texto: 'La sesión quedará inactiva y no permitirá nuevas marcaciones.', boton: 'Sí, desactivar', color: '#dc2626' },
         'horario-activar': { titulo: '¿Deseas activar este horario?', texto: 'Volverá a estar disponible para registrar asistencia.', boton: 'Sí, activar', color: '#059669' }
+        ,'transicion-laboral': { titulo: '¿Deseas guardar este vínculo laboral?', texto: 'Si la persona tiene un vínculo activo, se finalizará y se conservará su historial.', boton: 'Sí, guardar transición', color: '#7c3aed' }
     };
     document.querySelectorAll('form[action*="academico_guardar"]').forEach((formulario) => { formulario.dataset.confirmarAccion = 'academico-guardar'; });
     document.querySelectorAll('form[action*="academico_actualizar"]').forEach((formulario) => { formulario.dataset.confirmarAccion = 'academico-editar'; });
