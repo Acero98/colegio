@@ -45,7 +45,17 @@ document.addEventListener('DOMContentLoaded', () => {
         'academico-editar': { titulo: '¿Deseas guardar los cambios?', texto: 'Se actualizará la estructura académica.', boton: 'Sí, guardar cambios', color: '#d97706' },
         'academico-activar': { titulo: '¿Deseas activar este registro?', texto: 'Volverá a estar disponible para su uso.', boton: 'Sí, activar', color: '#059669' },
         'academico-desactivar': { titulo: '¿Deseas desactivar este registro?', texto: 'No estará disponible para nuevos procesos.', boton: 'Sí, desactivar', color: '#dc2626' },
-        'matricula-guardar': { titulo: '¿Deseas registrar esta matrícula?', texto: 'Se validará el cupo disponible de la sección.', boton: 'Sí, matricular', color: '#2563eb' }
+        'matricula-guardar': { titulo: '¿Deseas registrar esta matrícula?', texto: 'Se validará el cupo disponible de la sección.', boton: 'Sí, matricular', color: '#2563eb' },
+        'matricula-editar': { titulo: '¿Deseas guardar los cambios?', texto: 'Se actualizará la matrícula y se validará el cupo si corresponde.', boton: 'Sí, guardar cambios', color: '#d97706' },
+        'promocion-procesar': { titulo: '¿Deseas procesar la promoción?', texto: 'Se crearán las nuevas matrículas y se aplicarán promociones, repitencias, retiros o egresos.', boton: 'Sí, procesar', color: '#2563eb' },
+        'asistencia-manual': { titulo: '¿Deseas guardar la asistencia manual?', texto: 'Se actualizará el registro de todos los alumnos de la sección.', boton: 'Sí, guardar', color: '#2563eb' },
+        'asistencia-cerrar': { titulo: '¿Deseas cerrar la asistencia de hoy?', texto: 'Los alumnos activos sin registro serán marcados como falta.', boton: 'Sí, cerrar día', color: '#d97706' },
+        'asistencia-cerrar-personal': { titulo: '¿Deseas cerrar la asistencia del personal?', texto: 'Se registrarán faltas de jornadas y sesiones que no tengan marcación.', boton: 'Sí, cerrar personal', color: '#7c3aed' }
+        ,'horario-guardar': { titulo: '¿Deseas guardar este horario?', texto: 'La jornada o sesión quedará disponible para el control de asistencia.', boton: 'Sí, guardar', color: '#2563eb' },
+        'horario-editar': { titulo: '¿Deseas guardar los cambios?', texto: 'Se actualizará la configuración del horario.', boton: 'Sí, guardar cambios', color: '#d97706' },
+        'horario-desactivar': { titulo: '¿Deseas desactivar esta jornada?', texto: 'Dejará de permitir nuevas marcaciones.', boton: 'Sí, desactivar', color: '#dc2626' },
+        'horario-eliminar': { titulo: '¿Deseas desactivar esta sesión?', texto: 'La sesión quedará inactiva y no permitirá nuevas marcaciones.', boton: 'Sí, desactivar', color: '#dc2626' },
+        'horario-activar': { titulo: '¿Deseas activar este horario?', texto: 'Volverá a estar disponible para registrar asistencia.', boton: 'Sí, activar', color: '#059669' }
     };
     document.querySelectorAll('form[action*="academico_guardar"]').forEach((formulario) => { formulario.dataset.confirmarAccion = 'academico-guardar'; });
     document.querySelectorAll('form[action*="academico_actualizar"]').forEach((formulario) => { formulario.dataset.confirmarAccion = 'academico-editar'; });
@@ -53,6 +63,12 @@ document.addEventListener('DOMContentLoaded', () => {
         formulario.dataset.confirmarAccion = formulario.querySelector('[name="estado"]')?.value === 'ACTIVO' ? 'academico-activar' : 'academico-desactivar';
     });
     document.querySelectorAll('form[action*="matriculas_guardar"]').forEach((formulario) => { formulario.dataset.confirmarAccion = 'matricula-guardar'; });
+    document.querySelectorAll('form[action*="matriculas_actualizar"]').forEach((formulario) => { formulario.dataset.confirmarAccion = 'matricula-editar'; });
+    document.querySelectorAll('form[action*="horarios_guardar"]').forEach((formulario) => {
+        const entidad = formulario.querySelector('[name="entidad"]')?.value;
+        formulario.dataset.confirmarAccion = entidad === 'jornada_desactivar' ? 'horario-desactivar' : (entidad === 'sesion_desactivar' ? 'horario-eliminar' : (entidad === 'jornada_activar' || entidad === 'sesion_activar' ? 'horario-activar' : (entidad?.includes('actualizar') ? 'horario-editar' : 'horario-guardar')));
+    });
+    document.querySelectorAll('form[data-promocion-anual]').forEach((formulario) => { formulario.dataset.confirmarAccion = 'promocion-procesar'; });
     document.querySelectorAll('form[data-confirmar-accion]').forEach((formulario) => {
         formulario.addEventListener('submit', async (evento) => {
             evento.preventDefault();
@@ -197,9 +213,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 .split(',')
                 .map(Number)
                 .filter(Number.isFinite);
+            const orden = (tabla.dataset.order || '')
+                .split(',')
+                .map((parte) => parte.trim().split(':'))
+                .filter((parte) => parte.length === 2 && Number.isFinite(Number(parte[0])))
+                .map((parte) => [Number(parte[0]), parte[1] === 'desc' ? 'desc' : 'asc']);
             new DataTable(tabla, {
                 pageLength: 10,
                 lengthMenu: opcionesTamano,
+                order: orden,
                 autoWidth: false,
                 layout: {
                     topStart: 'pageLength',

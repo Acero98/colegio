@@ -3,20 +3,16 @@
 class FotocheckModel
 {
     private $db;
+    public function __construct(PDO $db) { $this->db = $db; }
 
-    public function __construct(PDO $db)
+    public function listarPersonas(): array
     {
-        $this->db = $db;
+        return $this->db->query("SELECT p.id_persona,p.numero_documento,p.nombres,p.apellidos,p.fotografia,COALESCE(MAX(m.codigo_alumno),p.numero_documento) codigo_alumno,COALESCE(MAX(CONCAT(n.nombre,' · ',g.nombre,' ',s.nombre)),CASE WHEN SUM(pp.tipo='DOCENTE')>0 THEN 'Personal docente' ELSE 'Personal administrativo' END) seccion,CASE WHEN MAX(m.id_matricula) IS NOT NULL THEN 'ALUMNO' WHEN SUM(pp.tipo='DOCENTE')>0 THEN 'DOCENTE' ELSE 'ADMINISTRATIVO' END tipo_fotocheck,q.id_qr,q.emitido_en FROM personas p LEFT JOIN persona_perfiles pp ON pp.id_persona=p.id_persona AND pp.estado='ACTIVO' LEFT JOIN matriculas m ON m.id_persona=p.id_persona AND m.estado='ACTIVO' AND EXISTS(SELECT 1 FROM periodos_academicos periodo_m WHERE periodo_m.id_periodo_academico=m.id_periodo_academico AND periodo_m.estado='ACTIVO') LEFT JOIN secciones s ON s.id_seccion=m.id_seccion LEFT JOIN grados g ON g.id_grado=s.id_grado LEFT JOIN niveles n ON n.id_nivel=g.id_nivel LEFT JOIN codigos_qr q ON q.id_persona=p.id_persona AND q.estado='ACTIVO' WHERE p.estado='ACTIVO' AND (pp.tipo IN('DOCENTE','ADMINISTRATIVO') OR m.id_matricula IS NOT NULL) GROUP BY p.id_persona,q.id_qr,q.emitido_en ORDER BY p.apellidos,p.nombres")->fetchAll();
     }
 
-    public function listarAlumnos(): array
+    public function obtenerPersona(int $idPersona): ?array
     {
-        return $this->db->query("SELECT p.id_persona, p.numero_documento, p.nombres, p.apellidos, p.fotografia, m.codigo_alumno, CONCAT(n.nombre, ' · ',g.nombre,' ',s.nombre) AS seccion, q.id_qr, q.emitido_en FROM matriculas m INNER JOIN personas p ON p.id_persona=m.id_persona INNER JOIN secciones s ON s.id_seccion=m.id_seccion INNER JOIN grados g ON g.id_grado=s.id_grado INNER JOIN niveles n ON n.id_nivel=g.id_nivel LEFT JOIN codigos_qr q ON q.id_persona=p.id_persona AND q.estado='ACTIVO' WHERE m.estado='ACTIVO' ORDER BY p.apellidos,p.nombres")->fetchAll();
-    }
-
-    public function obtenerAlumno(int $idPersona): ?array
-    {
-        $stmt = $this->db->prepare("SELECT p.*, m.codigo_alumno, CONCAT(n.nombre, ' · ',g.nombre,' ',s.nombre) AS seccion, q.id_qr FROM matriculas m INNER JOIN personas p ON p.id_persona=m.id_persona INNER JOIN secciones s ON s.id_seccion=m.id_seccion INNER JOIN grados g ON g.id_grado=s.id_grado INNER JOIN niveles n ON n.id_nivel=g.id_nivel LEFT JOIN codigos_qr q ON q.id_persona=p.id_persona AND q.estado='ACTIVO' WHERE p.id_persona=:persona AND m.estado='ACTIVO' LIMIT 1");
+        $stmt = $this->db->prepare("SELECT p.*,COALESCE(MAX(m.codigo_alumno),p.numero_documento) codigo_alumno,COALESCE(MAX(CONCAT(n.nombre,' · ',g.nombre,' ',s.nombre)),CASE WHEN SUM(pp.tipo='DOCENTE')>0 THEN 'Personal docente' ELSE 'Personal administrativo' END) seccion,CASE WHEN MAX(m.id_matricula) IS NOT NULL THEN 'ALUMNO' WHEN SUM(pp.tipo='DOCENTE')>0 THEN 'DOCENTE' ELSE 'ADMINISTRATIVO' END tipo_fotocheck,q.id_qr FROM personas p LEFT JOIN persona_perfiles pp ON pp.id_persona=p.id_persona AND pp.estado='ACTIVO' LEFT JOIN matriculas m ON m.id_persona=p.id_persona AND m.estado='ACTIVO' AND EXISTS(SELECT 1 FROM periodos_academicos periodo_m WHERE periodo_m.id_periodo_academico=m.id_periodo_academico AND periodo_m.estado='ACTIVO') LEFT JOIN secciones s ON s.id_seccion=m.id_seccion LEFT JOIN grados g ON g.id_grado=s.id_grado LEFT JOIN niveles n ON n.id_nivel=g.id_nivel LEFT JOIN codigos_qr q ON q.id_persona=p.id_persona AND q.estado='ACTIVO' WHERE p.id_persona=:persona AND p.estado='ACTIVO' AND (pp.tipo IN('DOCENTE','ADMINISTRATIVO') OR m.id_matricula IS NOT NULL) GROUP BY p.id_persona,q.id_qr LIMIT 1");
         $stmt->execute([':persona' => $idPersona]);
         return $stmt->fetch() ?: null;
     }

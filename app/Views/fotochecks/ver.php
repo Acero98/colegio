@@ -1,6 +1,6 @@
 <?php
 $nombreInstitucion = defined('INSTITUCION_NOMBRE') ? INSTITUCION_NOMBRE : 'Caleb School';
-$subtituloInstitucion = defined('INSTITUCION_SUBTITULO') ? INSTITUCION_SUBTITULO : SISTEMA_NOMBRE; 
+$subtituloInstitucion = defined('INSTITUCION_SUBTITULO') ? INSTITUCION_SUBTITULO : SISTEMA_NOMBRE;
 $periodoInstitucional = defined('INSTITUCION_PERIODO') ? INSTITUCION_PERIODO : date('Y');
 ?>
 <!doctype html>
@@ -161,14 +161,14 @@ $periodoInstitucional = defined('INSTITUCION_PERIODO') ? INSTITUCION_PERIODO : d
             position: relative;
             z-index: 1;
             display: grid;
-            grid-template-columns: 18mm minmax(0, 1fr) 18mm;
-            gap: 2.8mm;
+            grid-template-columns: 16.8mm minmax(0, 1fr) 24.4mm;
+            gap: 1.8mm;
             padding: 3.3mm 4mm 2.4mm;
         }
 
         .foto {
             display: grid;
-            width: 18mm;
+            width: 16.8mm;
             height: 21.8mm;
             place-items: center;
             overflow: hidden;
@@ -224,8 +224,8 @@ $periodoInstitucional = defined('INSTITUCION_PERIODO') ? INSTITUCION_PERIODO : d
 
         .qr-bloque img {
             display: block;
-            width: 15.6mm;
-            height: 15.6mm;
+            width: 21.2mm;
+            height: 21.2mm;
         }
 
         .qr-texto {
@@ -324,7 +324,7 @@ $periodoInstitucional = defined('INSTITUCION_PERIODO') ? INSTITUCION_PERIODO : d
                     <strong><?= htmlspecialchars($nombreInstitucion) ?></strong>
                     <small><?= htmlspecialchars($subtituloInstitucion) ?></small>
                 </div>
-                <span class="tipo">Alumno</span>
+                <span class="tipo"><?= htmlspecialchars($alumno['tipo_fotocheck'] ?? 'PERSONA') ?></span>
             </header>
 
             <div class="contenido">
@@ -337,8 +337,8 @@ $periodoInstitucional = defined('INSTITUCION_PERIODO') ? INSTITUCION_PERIODO : d
                 </div>
                 <div class="datos">
                     <div class="nombre"><?= htmlspecialchars($alumno['nombres'] . ' ' . $alumno['apellidos']) ?></div>
-                    <p class="dato"><b>Código</b><?= htmlspecialchars($alumno['codigo_alumno']) ?></p>
-                    <p class="dato"><b>Sección</b><?= htmlspecialchars($alumno['seccion']) ?></p>
+                    <p class="dato"><b><?= ($alumno['tipo_fotocheck'] ?? 'ALUMNO') === 'ALUMNO' ? 'Código' : 'Documento' ?></b><?= htmlspecialchars($alumno['codigo_alumno']) ?></p>
+                    <p class="dato"><b><?= ($alumno['tipo_fotocheck'] ?? 'ALUMNO') === 'ALUMNO' ? 'Sección' : 'Función' ?></b><?= htmlspecialchars($alumno['seccion']) ?></p>
                     <p class="dato"><b>Documento</b><?= htmlspecialchars($alumno['numero_documento']) ?></p>
                 </div>
                 <div class="qr-bloque">

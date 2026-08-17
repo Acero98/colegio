@@ -57,6 +57,45 @@ class AsistenciaController
         require __DIR__ . '/../Views/asistencia/hoy.php';
         require __DIR__ . '/../Views/layouts/footer.php';
     }
+    public function manual(): void
+    {
+        autorizar('asistencia.ver'); global $conexion;
+        $fecha = $_GET['fecha'] ?? date('Y-m-d');
+        $model = new AsistenciaModel($conexion);
+        $secciones = $model->seccionesManual($fecha);
+        $idSeccion = (int) ($_GET['id_seccion'] ?? 0);
+        $alumnos = $idSeccion ? $model->listaManual($idSeccion, $fecha) : [];
+        require __DIR__ . '/../Views/layouts/header.php'; require __DIR__ . '/../Views/layouts/navbar.php'; require __DIR__ . '/../Views/asistencia/manual.php'; require __DIR__ . '/../Views/layouts/footer.php';
+    }
+    public function guardarManual(): void
+    {
+        autorizar('asistencia.ver'); validarCsrf(); global $conexion;
+        try { $cantidad = (new AsistenciaModel($conexion))->guardarManual($_POST, (int) $_SESSION['usuario']['id_usuario']); mensaje('success', "Asistencia manual guardada para {$cantidad} alumnos."); }
+        catch (Throwable $e) { mensaje('error', 'No se pudo guardar la asistencia manual. Revise la sección y los estados.'); }
+        header('Location: index.php?url=asistencia_manual&fecha=' . urlencode($_POST['fecha'] ?? date('Y-m-d')) . '&id_seccion=' . (int) ($_POST['id_seccion'] ?? 0)); exit;
+    }
+    public function cerrarDia(): void
+    {
+        autorizar('asistencia.ver'); validarCsrf(); global $conexion;
+        try { $resultado = (new AsistenciaModel($conexion))->cerrarDia($_POST['fecha'] ?? ''); mensaje('success', "Cierre diario completado: {$resultado['faltas']} faltas y {$resultado['incompletas']} salidas pendientes."); }
+        catch (DomainException|InvalidArgumentException $e) { mensaje('warning', $e->getMessage()); }
+        catch (Throwable $e) { mensaje('error', 'No se pudo realizar el cierre diario.'); }
+        header('Location: index.php?url=asistencia_hoy'); exit;
+    }
+    public function personal(): void
+    {
+        autorizar('asistencia.ver'); global $conexion; $fecha = $_GET['fecha'] ?? date('Y-m-d');
+        $asistencias = (new AsistenciaModel($conexion))->resumenPersonal($fecha);
+        require __DIR__ . '/../Views/layouts/header.php'; require __DIR__ . '/../Views/layouts/navbar.php'; require __DIR__ . '/../Views/asistencia/personal.php'; require __DIR__ . '/../Views/layouts/footer.php';
+    }
+    public function cerrarPersonal(): void
+    {
+        autorizar('asistencia.ver'); validarCsrf(); global $conexion;
+        try { $r = (new AsistenciaModel($conexion))->cerrarPersonalDia($_POST['fecha'] ?? ''); mensaje('success', "Cierre de personal: {$r['faltas_jornada']} faltas de jornada, {$r['faltas_sesion']} faltas de sesión y {$r['incompletas']} salidas pendientes."); }
+        catch (DomainException|InvalidArgumentException $e) { mensaje('warning', $e->getMessage()); }
+        catch (Throwable $e) { mensaje('error', 'No se pudo realizar el cierre de personal.'); }
+        header('Location: index.php?url=asistencia_personal'); exit;
+    }
     public function historial(): void
     {
         autorizar('asistencia.ver');global $conexion;$filtros=['fecha_inicio'=>$_GET['fecha_inicio']??date('Y-m-01'),'fecha_fin'=>$_GET['fecha_fin']??date('Y-m-d'),'estado'=>$_GET['estado']??''];$asistencias=(new AsistenciaModel($conexion))->historial($filtros);require __DIR__.'/../Views/layouts/header.php';require __DIR__.'/../Views/layouts/navbar.php';require __DIR__.'/../Views/asistencia/historial.php';require __DIR__.'/../Views/layouts/footer.php';

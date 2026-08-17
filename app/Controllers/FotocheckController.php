@@ -11,7 +11,7 @@ class FotocheckController
     {
         autorizar('fotochecks.ver');
         global $conexion;
-        $alumnos = (new FotocheckModel($conexion))->listarAlumnos();
+        $personas = (new FotocheckModel($conexion))->listarPersonas();
         require __DIR__ . '/../Views/layouts/header.php';
         require __DIR__ . '/../Views/layouts/navbar.php';
         require __DIR__ . '/../Views/fotochecks/index.php';
@@ -24,9 +24,9 @@ class FotocheckController
         validarCsrf();
         $idPersona = (int) ($_POST['id_persona'] ?? 0);
         global $conexion;
-        $alumno = (new FotocheckModel($conexion))->obtenerAlumno($idPersona);
-        if (!$alumno) {
-            mensaje('error', 'El alumno no tiene una matrícula activa.');
+        $persona = (new FotocheckModel($conexion))->obtenerPersona($idPersona);
+        if (!$persona) {
+            mensaje('error', 'La persona no está habilitada para recibir un fotocheck.');
         } else {
             try {
                 $idQr = (new QrService())->emitir($conexion, $idPersona);
@@ -44,9 +44,9 @@ class FotocheckController
     {
         autorizar('fotochecks.ver');
         global $conexion;
-        $alumno = (new FotocheckModel($conexion))->obtenerAlumno((int) ($_GET['id'] ?? 0));
+        $alumno = (new FotocheckModel($conexion))->obtenerPersona((int) ($_GET['id'] ?? 0));
         if (!$alumno || empty($alumno['id_qr'])) {
-            mensaje('warning', 'Genere primero el código QR del alumno.');
+            mensaje('warning', 'Genere primero el código QR de la persona.');
             header('Location: index.php?url=fotochecks');
             exit;
         }

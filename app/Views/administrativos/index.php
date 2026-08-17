@@ -1,0 +1,2 @@
+<div class="mb-6"><p class="text-sm font-medium text-cyan-600">Personas · Personal administrativo</p><h1 class="text-2xl font-bold">Administrativos</h1><p class="mt-1 text-sm text-slate-500">Consulta y gestiona los datos del personal administrativo registrado.</p></div>
+<div id="contenedor-tabla-administrativos"><?php $personas = $administrativos; require __DIR__ . '/../personas/listado.php'; ?></div>
