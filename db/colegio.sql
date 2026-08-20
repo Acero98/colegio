@@ -67,9 +67,14 @@ CREATE TABLE areas (id_area INT UNSIGNED AUTO_INCREMENT PRIMARY KEY, nombre VARC
 CREATE TABLE cargos (id_cargo INT UNSIGNED AUTO_INCREMENT PRIMARY KEY, id_area INT UNSIGNED NULL, nombre VARCHAR(100) NOT NULL, estado ENUM('ACTIVO','INACTIVO') NOT NULL DEFAULT 'ACTIVO', CONSTRAINT fk_cargo_area FOREIGN KEY(id_area) REFERENCES areas(id_area));
 CREATE TABLE vinculos_laborales (
   id_vinculo BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, id_persona BIGINT UNSIGNED NOT NULL,
+  id_vinculo_anterior BIGINT UNSIGNED NULL,
   id_area INT UNSIGNED NULL, id_cargo INT UNSIGNED NULL, tipo ENUM('DOCENTE','ADMINISTRATIVO') NOT NULL,
-  modalidad_pago ENUM('MENSUAL','HORA','SESION') NOT NULL, monto_base DECIMAL(12,2) NOT NULL DEFAULT 0,
+  modalidad_pago ENUM('MENSUAL','HORA','SESION','MIXTO') NOT NULL, monto_base DECIMAL(12,2) NOT NULL DEFAULT 0,
+  monto_mensual DECIMAL(12,2) NOT NULL DEFAULT 0, monto_hora DECIMAL(12,2) NOT NULL DEFAULT 0,
+  monto_sesion DECIMAL(12,2) NOT NULL DEFAULT 0, dias_laborables VARCHAR(20) NOT NULL DEFAULT '1,2,3,4,5',
   fecha_inicio DATE NOT NULL, fecha_fin DATE NULL, estado ENUM('ACTIVO','INACTIVO','FINALIZADO') NOT NULL DEFAULT 'ACTIVO',
+  motivo_cambio VARCHAR(250) NULL, registrado_por BIGINT UNSIGNED NULL, registrado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  KEY ix_vinculo_anterior(id_vinculo_anterior),
   CONSTRAINT fk_vinculo_persona FOREIGN KEY(id_persona) REFERENCES personas(id_persona),
   CONSTRAINT fk_vinculo_area FOREIGN KEY(id_area) REFERENCES areas(id_area),
   CONSTRAINT fk_vinculo_cargo FOREIGN KEY(id_cargo) REFERENCES cargos(id_cargo)
@@ -100,7 +105,10 @@ CREATE TABLE asignaciones_horario (
 ) ENGINE=InnoDB;
 CREATE TABLE calendario_institucional (
   id_calendario BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, fecha DATE NOT NULL, tipo ENUM('FERIADO','NO_LABORABLE','SUSPENSION') NOT NULL,
-  descripcion VARCHAR(200) NOT NULL, UNIQUE KEY uq_calendario_fecha_tipo(fecha,tipo)
+  descripcion VARCHAR(200) NOT NULL, estado ENUM('ACTIVO','INACTIVO') NOT NULL DEFAULT 'ACTIVO',
+  creado_por BIGINT UNSIGNED NULL, creado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  actualizado_por BIGINT UNSIGNED NULL, actualizado_en DATETIME NULL,
+  UNIQUE KEY uq_calendario_fecha_tipo(fecha,tipo)
 ) ENGINE=InnoDB;
 
 CREATE TABLE codigos_qr (
@@ -154,12 +162,12 @@ CREATE TABLE conceptos_cobro (
 CREATE TABLE tarifas_cobro (
   id_tarifa BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, id_concepto_cobro INT UNSIGNED NOT NULL,
   id_periodo_academico INT UNSIGNED NOT NULL, id_grado INT UNSIGNED NULL, importe DECIMAL(12,2) NOT NULL,
-  vigencia_inicio DATE NOT NULL, vigencia_fin DATE NULL, CONSTRAINT fk_tarifa_concepto FOREIGN KEY(id_concepto_cobro) REFERENCES conceptos_cobro(id_concepto_cobro),
+  vigencia_inicio DATE NOT NULL, vigencia_fin DATE NULL, estado ENUM('ACTIVO','INACTIVO') NOT NULL DEFAULT 'ACTIVO', CONSTRAINT fk_tarifa_concepto FOREIGN KEY(id_concepto_cobro) REFERENCES conceptos_cobro(id_concepto_cobro),
   CONSTRAINT fk_tarifa_periodo FOREIGN KEY(id_periodo_academico) REFERENCES periodos_academicos(id_periodo_academico)
 ) ENGINE=InnoDB;
 CREATE TABLE cuentas_cobrar (
   id_cuenta BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, id_matricula BIGINT UNSIGNED NOT NULL, id_concepto_cobro INT UNSIGNED NOT NULL,
-  periodo_cobro DATE NOT NULL, fecha_vencimiento DATE NULL, importe_original DECIMAL(12,2) NOT NULL, descuento DECIMAL(12,2) NOT NULL DEFAULT 0,
+  periodo_cobro DATE NOT NULL, fecha_vencimiento DATE NULL, importe_original DECIMAL(12,2) NOT NULL, descuento DECIMAL(12,2) NOT NULL DEFAULT 0, recargo DECIMAL(12,2) NOT NULL DEFAULT 0,
   saldo DECIMAL(12,2) NOT NULL, estado ENUM('PENDIENTE','PARCIAL','PAGADA','ANULADA','VENCIDA') NOT NULL DEFAULT 'PENDIENTE',
   UNIQUE KEY uq_cuenta(id_matricula,id_concepto_cobro,periodo_cobro),
   CONSTRAINT fk_cuenta_matricula FOREIGN KEY(id_matricula) REFERENCES matriculas(id_matricula),
@@ -169,13 +177,31 @@ CREATE TABLE pagos_alumno (
   id_pago BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, numero_recibo VARCHAR(30) NOT NULL,
   id_apoderado BIGINT UNSIGNED NULL, fecha_pago DATETIME NOT NULL, medio_pago ENUM('EFECTIVO','TRANSFERENCIA','YAPE','PLIN','OTRO') NOT NULL,
   importe_total DECIMAL(12,2) NOT NULL, estado ENUM('REGISTRADO','ANULADO') NOT NULL DEFAULT 'REGISTRADO',
-  registrado_por BIGINT UNSIGNED NULL, observacion VARCHAR(250) NULL, UNIQUE KEY uq_recibo(numero_recibo),
+  registrado_por BIGINT UNSIGNED NULL, observacion VARCHAR(250) NULL, motivo_anulacion VARCHAR(250) NULL, anulado_por BIGINT UNSIGNED NULL, anulado_en DATETIME NULL, UNIQUE KEY uq_recibo(numero_recibo),
   CONSTRAINT fk_pago_apoderado FOREIGN KEY(id_apoderado) REFERENCES personas(id_persona)
 ) ENGINE=InnoDB;
 CREATE TABLE pagos_alumno_detalles (
   id_pago_detalle BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, id_pago BIGINT UNSIGNED NOT NULL, id_cuenta BIGINT UNSIGNED NOT NULL, importe DECIMAL(12,2) NOT NULL,
   CONSTRAINT fk_pago_det_pago FOREIGN KEY(id_pago) REFERENCES pagos_alumno(id_pago),
   CONSTRAINT fk_pago_det_cuenta FOREIGN KEY(id_cuenta) REFERENCES cuentas_cobrar(id_cuenta)
+) ENGINE=InnoDB;
+CREATE TABLE ajustes_cobro (
+  id_ajuste BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, id_cuenta BIGINT UNSIGNED NOT NULL,
+  tipo ENUM('DESCUENTO','BECA','EXONERACION','RECARGO') NOT NULL, importe DECIMAL(12,2) NOT NULL,
+  motivo VARCHAR(250) NOT NULL, registrado_por BIGINT UNSIGNED NULL, creado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_ajuste_cuenta FOREIGN KEY(id_cuenta) REFERENCES cuentas_cobrar(id_cuenta)
+) ENGINE=InnoDB;
+CREATE TABLE cierres_caja (
+  id_cierre BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, fecha DATE NOT NULL, efectivo_sistema DECIMAL(12,2) NOT NULL DEFAULT 0,
+  efectivo_declarado DECIMAL(12,2) NOT NULL DEFAULT 0, otros_sistema DECIMAL(12,2) NOT NULL DEFAULT 0,
+  otros_declarado DECIMAL(12,2) NOT NULL DEFAULT 0, diferencia DECIMAL(12,2) NOT NULL DEFAULT 0,
+  observacion VARCHAR(250) NULL, cerrado_por BIGINT UNSIGNED NULL, cerrado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, id_apertura BIGINT UNSIGNED NULL,
+  UNIQUE KEY uq_cierre_apertura(id_apertura)
+) ENGINE=InnoDB;
+CREATE TABLE aperturas_caja (
+  id_apertura BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, fecha DATE NOT NULL, monto_apertura DECIMAL(12,2) NOT NULL DEFAULT 0,
+  observacion VARCHAR(250) NULL, abierto_por BIGINT UNSIGNED NULL, abierto_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  estado ENUM('ABIERTA','CERRADA') NOT NULL DEFAULT 'ABIERTA', KEY ix_apertura_caja_fecha(fecha,estado)
 ) ENGINE=InnoDB;
 
 CREATE TABLE periodos_pago (

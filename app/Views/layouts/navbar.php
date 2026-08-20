@@ -44,8 +44,20 @@
 
             <?php if (tienePermiso('cobros.gestionar') || tienePermiso('planilla.calcular')): ?>
                 <p class="sidebar-label mt-4">Finanzas</p>
-                <?php if (tienePermiso('cobros.gestionar')): ?><a href="index.php?url=cobros" class="sidebar-link <?= $rutaActual === 'cobros' ? 'sidebar-link-active' : '' ?>"><i class="bi bi-cash-coin"></i> Cobros</a><?php endif; ?>
-                <?php if (tienePermiso('planilla.calcular')): ?><a href="index.php?url=planilla" class="sidebar-link <?= $rutaActual === 'planilla' ? 'sidebar-link-active' : '' ?>"><i class="bi bi-wallet2"></i> Planilla</a><?php endif; ?>
+                <?php if (tienePermiso('cobros.gestionar')): ?><a href="index.php?url=cobros" class="sidebar-link <?= $rutaActual === 'cobros' ? 'sidebar-link-active' : '' ?>"><i class="bi bi-cash-coin"></i> Cobros</a><a href="index.php?url=cobros_pagos" class="sidebar-link <?= $rutaActual === 'cobros_pagos' ? 'sidebar-link-active' : '' ?>"><i class="bi bi-receipt"></i> Recibos</a><a href="index.php?url=cobros_cierre_caja" class="sidebar-link <?= $rutaActual === 'cobros_cierre_caja' ? 'sidebar-link-active' : '' ?>"><i class="bi bi-lock"></i> Cierre de caja</a><a href="index.php?url=cobros_tarifas" class="sidebar-link <?= $rutaActual === 'cobros_tarifas' ? 'sidebar-link-active' : '' ?>"><i class="bi bi-list-ul"></i> Tarifas y conceptos</a><?php endif; ?>
+                <?php if (tienePermiso('planilla.calcular')): ?><a href="index.php?url=planilla" class="sidebar-link <?= in_array($rutaActual, ['planilla','planilla_previa','planilla_revision','planilla_ajustes','planilla_pagos'], true) ? 'sidebar-link-active' : '' ?>"><i class="bi bi-wallet2"></i> Planilla</a><a href="index.php?url=planilla_historial" class="sidebar-link <?= $rutaActual === 'planilla_historial' ? 'sidebar-link-active' : '' ?>"><i class="bi bi-clock-history"></i> Historial de planilla</a><a href="index.php?url=planilla_auditoria" class="sidebar-link <?= $rutaActual === 'planilla_auditoria' ? 'sidebar-link-active' : '' ?>"><i class="bi bi-shield-check"></i> Auditoría de planilla</a><?php endif; ?>
+            <?php endif; ?>
+
+            <?php if (tienePermiso('reportes.ver')): ?>
+                <p class="sidebar-label mt-4">Reportes</p>
+                <a href="index.php?url=reportes_generales" class="sidebar-link <?= in_array($rutaActual, ['reportes_generales','reportes_generales_imprimir'], true) ? 'sidebar-link-active' : '' ?>"><i class="bi bi-clipboard-data"></i> Reportes generales</a>
+                <?php if (tienePermiso('cobros.gestionar')): ?><a href="index.php?url=reportes_financieros" class="sidebar-link <?= $rutaActual === 'reportes_financieros' ? 'sidebar-link-active' : '' ?>"><i class="bi bi-bar-chart-line"></i> Reportes financieros</a><?php endif; ?>
+                <?php if (tienePermiso('planilla.calcular')): ?><a href="index.php?url=planilla_reporte" class="sidebar-link <?= $rutaActual === 'planilla_reporte' ? 'sidebar-link-active' : '' ?>"><i class="bi bi-file-earmark-bar-graph"></i> Reportes de planilla</a><?php endif; ?>
+            <?php endif; ?>
+
+            <?php if (tienePermiso('configuracion.gestionar') || tienePermiso('asistencia.configurar') || tienePermiso('planilla.calcular')): ?>
+                <p class="sidebar-label mt-4">Configuración</p>
+                <a href="index.php?url=calendario_institucional" class="sidebar-link <?= $rutaActual === 'calendario_institucional' ? 'sidebar-link-active' : '' ?>"><i class="bi bi-calendar-event"></i> Calendario institucional</a>
             <?php endif; ?>
 
             <?php if (tienePermiso('usuarios.gestionar')): ?><p class="sidebar-label mt-4">Seguridad</p><a href="index.php?url=usuarios" class="sidebar-link <?= $rutaActual === 'usuarios' ? 'sidebar-link-active' : '' ?>"><i class="bi bi-shield-lock"></i> Usuarios</a><?php endif; ?>

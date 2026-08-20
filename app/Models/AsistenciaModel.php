@@ -217,7 +217,7 @@ class AsistenciaModel
     {
         if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $fecha)) throw new InvalidArgumentException('La fecha no es válida.');
         if ((int) date('N', strtotime($fecha)) >= 6) throw new DomainException('No se puede cerrar asistencia en fin de semana.');
-        $calendario = $this->db->prepare('SELECT 1 FROM calendario_institucional WHERE fecha=? LIMIT 1');
+        $calendario = $this->db->prepare("SELECT 1 FROM calendario_institucional WHERE fecha=? AND estado='ACTIVO' LIMIT 1");
         $calendario->execute([$fecha]);
         if ($calendario->fetchColumn()) throw new DomainException('La fecha está marcada como no laborable en el calendario institucional.');
         $sql = "INSERT INTO asistencias_diarias(id_persona,fecha,id_matricula,estado,observacion,calculado_en) SELECT m.id_persona,:fecha,m.id_matricula,'FALTA','Generada por cierre diario',NOW() FROM matriculas m INNER JOIN periodos_academicos pa ON pa.id_periodo_academico=m.id_periodo_academico LEFT JOIN asistencias_diarias a ON a.id_matricula=m.id_matricula AND a.fecha=:fecha2 WHERE m.estado='ACTIVO' AND pa.estado='ACTIVO' AND :fecha3 BETWEEN pa.fecha_inicio AND pa.fecha_fin AND a.id_asistencia IS NULL";
@@ -233,7 +233,7 @@ class AsistenciaModel
     {
         if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $fecha)) throw new InvalidArgumentException('La fecha no es válida.');
         if ((int) date('N', strtotime($fecha)) >= 6) throw new DomainException('No se puede cerrar asistencia en fin de semana.');
-        $calendario = $this->db->prepare('SELECT 1 FROM calendario_institucional WHERE fecha=? LIMIT 1');
+        $calendario = $this->db->prepare("SELECT 1 FROM calendario_institucional WHERE fecha=? AND estado='ACTIVO' LIMIT 1");
         $calendario->execute([$fecha]);
         if ($calendario->fetchColumn()) throw new DomainException('La fecha está marcada como no laborable en el calendario institucional.');
         $this->db->beginTransaction();
