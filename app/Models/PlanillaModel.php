@@ -179,8 +179,8 @@ class PlanillaModel
                 $des = 0;
                 foreach ($r->fetchAll() as $reg) {
                     $f = json_decode($reg['formula'], true);
-                    $campo = $reg['evento'] === 'TARDANZA' ? 'COALESCE(SUM(minutos_tardanza),0)' : ($reg['evento'] === 'FALTA' ? "COALESCE(SUM(estado='FALTA'),0)" : '0');
-                    $a = $this->db->prepare("SELECT $campo FROM asistencias_diarias WHERE id_persona=? AND fecha BETWEEN ? AND ?");
+                    $campo = $reg['evento'] === 'TARDANZA' ? "COALESCE(SUM(CASE WHEN NOT EXISTS(SELECT 1 FROM incidencias_asistencia ia WHERE ia.id_asistencia=a.id_asistencia AND ia.tipo='JUSTIFICACION_TARDANZA' AND ia.estado='APROBADA') THEN a.minutos_tardanza ELSE 0 END),0)" : ($reg['evento'] === 'FALTA' ? "COALESCE(SUM(a.estado='FALTA'),0)" : '0');
+                    $a = $this->db->prepare("SELECT $campo FROM asistencias_diarias a WHERE a.id_persona=? AND a.fecha BETWEEN ? AND ?");
                     $a->execute([$d['id_persona'], $p['fecha_inicio'], $p['fecha_fin']]);
                     $cant = (float)$a->fetchColumn();
                     $imp = round($cant * (float)($f['monto_unitario'] ?? 0), 2);

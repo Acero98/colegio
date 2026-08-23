@@ -4,9 +4,9 @@
 
 USE colegio;
 
-INSERT INTO institucion (id_institucion, nombre, ruc, direccion, telefono, correo)
-VALUES (1, 'I.E. Modelo San Martín', '20123456789', 'Av. Principal 123', '999 111 222', 'contacto@colegiomodelo.edu.pe')
-ON DUPLICATE KEY UPDATE nombre=VALUES(nombre), ruc=VALUES(ruc), direccion=VALUES(direccion), telefono=VALUES(telefono), correo=VALUES(correo);
+INSERT INTO institucion (id_institucion, nombre, nombre_corto, razon_social, ruc, direccion, telefono, correo, sitio_web, lema, codigo_modular, ugel, representante_nombre, representante_cargo)
+VALUES (1, 'I.E. Modelo San Martín', 'San Martín', 'Institución Educativa Modelo San Martín S.A.C.', '20123456789', 'Av. Principal 123', '999 111 222', 'contacto@colegiomodelo.edu.pe', 'https://colegiomodelo.edu.pe', 'Educación para el futuro', '1234567', 'UGEL 03', 'Rosa Mendoza Pérez', 'Directora general')
+ON DUPLICATE KEY UPDATE nombre=VALUES(nombre), nombre_corto=VALUES(nombre_corto), razon_social=VALUES(razon_social), ruc=VALUES(ruc), direccion=VALUES(direccion), telefono=VALUES(telefono), correo=VALUES(correo), sitio_web=VALUES(sitio_web), lema=VALUES(lema), codigo_modular=VALUES(codigo_modular), ugel=VALUES(ugel), representante_nombre=VALUES(representante_nombre), representante_cargo=VALUES(representante_cargo);
 
 INSERT IGNORE INTO periodos_academicos (nombre, fecha_inicio, fecha_fin, estado)
 VALUES ('Año escolar 2026', '2026-03-02', '2026-12-18', 'ACTIVO');

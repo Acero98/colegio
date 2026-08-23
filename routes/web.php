@@ -7,17 +7,16 @@ if (!isset($_GET['url'])) {
 }
 
 $url = $_GET['url'];
-$publicas = ['login', 'auth'];
-
-if (!in_array($url, $publicas, true)) {
-    requiereLogin();
-}
+$publicas = ['login', 'auth', 'institucion_logo'];
 
 $rutas = [
     'login' => ['AuthController', 'login'],
     'auth' => ['AuthController', 'auth'],
     'logout' => ['AuthController', 'logout'],
     'dashboard' => ['DashboardController', 'index'],
+    'institucion' => ['InstitucionController', 'index'],
+    'institucion_guardar' => ['InstitucionController', 'guardar'],
+    'institucion_logo' => ['InstitucionController', 'logo'],
     'portal_familia' => ['PortalController', 'index'],
     'usuarios' => ['UsuarioController', 'index'],
     'usuarios_guardar' => ['UsuarioController', 'guardar'],
@@ -49,6 +48,8 @@ $rutas = [
     'cobros_tarifa_estado' => ['CobroController', 'cambiarEstadoTarifa'],
     'cobros_concepto_estado' => ['CobroController', 'cambiarEstadoConcepto'],
     'cobros_pagos' => ['CobroController', 'pagos'],
+    'cobros_recibo' => ['CobroController', 'recibo'],
+    'cobros_evidencia' => ['CobroController', 'evidenciaPago'],
     'cobros_pago_anular' => ['CobroController', 'anularPago'],
     'cobros_ajustar' => ['CobroController', 'ajustarCuenta'],
     'reportes_financieros' => ['CobroController', 'reportes'],
@@ -58,6 +59,15 @@ $rutas = [
     'cobros_cierre_caja' => ['CobroController', 'cierreCaja'],
     'cobros_cierre_guardar' => ['CobroController', 'guardarCierreCaja'],
     'cobros_apertura_guardar' => ['CobroController', 'guardarAperturaCaja'],
+    'cobros_caja_rectificar' => ['CobroController', 'rectificarCaja'],
+    'cobros_caja_rectificacion_evidencia' => ['CobroController', 'evidenciaRectificacion'],
+    'finanzas_movimientos' => ['MovimientoFinancieroController', 'index'],
+    'finanzas_movimiento_guardar' => ['MovimientoFinancieroController', 'guardar'],
+    'finanzas_movimiento_anular' => ['MovimientoFinancieroController', 'anular'],
+    'finanzas_categoria_guardar' => ['MovimientoFinancieroController', 'guardarCategoria'],
+    'finanzas_categoria_estado' => ['MovimientoFinancieroController', 'estadoCategoria'],
+    'finanzas_movimiento_evidencia' => ['MovimientoFinancieroController', 'evidencia'],
+    'finanzas_reporte_imprimir' => ['MovimientoFinancieroController', 'reporteImprimir'],
     'planilla' => ['PlanillaController', 'index'],
     'planilla_previa' => ['PlanillaPreviewController', 'index'],
     'planilla_vinculo' => ['PlanillaController', 'guardarVinculo'],
@@ -69,9 +79,11 @@ $rutas = [
     'planilla_ajuste_anular' => ['PlanillaAjusteController', 'anular'],
     'planilla_aprobar' => ['PlanillaEstadoController', 'aprobar'],
     'planilla_cerrar' => ['PlanillaEstadoController', 'cerrar'],
+    'planilla_reabrir' => ['PlanillaEstadoController', 'reabrir'],
     'planilla_pagos' => ['PlanillaPagoController', 'index'],
     'planilla_pago_registrar' => ['PlanillaPagoController', 'registrar'],
     'planilla_pago_anular' => ['PlanillaPagoController', 'anular'],
+    'planilla_pago_decision' => ['PlanillaPagoController', 'decision'],
     'planilla_pago_constancia' => ['PlanillaConsultaController', 'constancia'],
     'planilla_historial' => ['PlanillaConsultaController', 'historial'],
     'planilla_reporte' => ['PlanillaConsultaController', 'reporte'],
@@ -103,6 +115,7 @@ $rutas = [
     'asistencia_historial' => ['AsistenciaController', 'historial'],
     'incidencias' => ['AsistenciaController', 'incidencias'],
     'incidencia_guardar' => ['AsistenciaController', 'guardarIncidencia'],
+    'incidencia_resolver' => ['AsistenciaController', 'resolverIncidencia'],
     'asistencia_configuracion' => ['AsistenciaController', 'configuracion'],
     'asistencia_configurar' => ['AsistenciaController', 'guardarConfiguracion'],
     'horarios' => ['HorarioController', 'index'],
@@ -110,9 +123,11 @@ $rutas = [
 ];
 
 if (!isset($rutas[$url])) {
-    http_response_code(404);
-    echo '404 - Página no encontrada';
-    exit;
+    renderizarErrorHttp(404);
+}
+
+if (!in_array($url, $publicas, true)) {
+    requiereLogin();
 }
 
 [$controlador, $metodo] = $rutas[$url];

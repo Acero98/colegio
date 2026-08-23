@@ -22,9 +22,7 @@ function autorizar(string $permiso): void
 {
     requiereLogin();
     if (!tienePermiso($permiso)) {
-        http_response_code(403);
-        require __DIR__ . '/../Views/errores/403.php';
-        exit;
+        renderizarErrorHttp(403);
     }
 }
 
@@ -46,12 +44,27 @@ function validarCsrf(): void
 {
     $recibido = $_POST['csrf_token'] ?? '';
     if (!is_string($recibido) || !hash_equals($_SESSION['csrf_token'] ?? '', $recibido)) {
-        http_response_code(419);
-        exit('Solicitud no válida. Actualice la página e intente nuevamente.');
+        renderizarErrorHttp(419);
     }
 }
 
 function mensaje(string $tipo, string $texto): void
 {
     $_SESSION['flash'] = compact('tipo', 'texto');
+}
+
+function institucionActual(): array
+{
+    static $institucion = null;
+    if (is_array($institucion)) return $institucion;
+    global $conexion;
+    if (!isset($conexion) || !($conexion instanceof PDO)) {
+        return ['nombre' => 'Institución educativa', 'nombre_corto' => 'Colegio', 'lema' => '', 'logo' => null];
+    }
+    try {
+        $institucion = $conexion->query('SELECT * FROM institucion ORDER BY id_institucion LIMIT 1')->fetch() ?: [];
+    } catch (Throwable $e) {
+        $institucion = [];
+    }
+    return $institucion + ['nombre' => 'Institución educativa', 'nombre_corto' => 'Colegio', 'lema' => '', 'logo' => null];
 }

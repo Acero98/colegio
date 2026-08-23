@@ -1,0 +1,11 @@
+Options -Indexes
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    RewriteRule ^(\.git|app|config|db|node_modules|routes|storage|vendor)(/|$) - [F,L,NC]
+</IfModule>
+
+<FilesMatch "^(\.env|composer\.(json|lock)|package(-lock)?\.json|README\.md|\.gitignore|\.gitattributes)$">
+    Require all denied
+</FilesMatch>

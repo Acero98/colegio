@@ -103,6 +103,47 @@
     color: #334155
 }
 
+.sidebar-module {
+    margin-top: .45rem
+}
+
+.sidebar-group-name {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: .7rem
+}
+
+.sidebar-group-name i {
+    width: 1.15rem;
+    flex: 0 0 auto;
+    text-align: center;
+    color: #2563eb
+}
+
+.sidebar-group-chevron {
+    font-size: .72rem;
+    color: #94a3b8;
+    transition: transform .18s ease
+}
+
+.sidebar-group[aria-expanded="true"] .sidebar-group-chevron {
+    transform: rotate(180deg)
+}
+
+.sidebar-submenu {
+    margin-top: .2rem;
+    margin-left: .65rem;
+    padding-left: .55rem;
+    border-left: 1px solid #dbeafe
+}
+
+.sidebar-submenu .sidebar-link {
+    padding-top: .55rem;
+    padding-bottom: .55rem;
+    font-size: .82rem
+}
+
 .sidebar-group:hover {
     background: #f8fafc
 }
@@ -122,10 +163,23 @@
     flex-direction: column;
     width: 18rem !important;
     height: 100vh !important;
+    height: 100dvh !important;
     visibility: visible !important;
     opacity: 1 !important;
     transform: translateX(0) !important;
     transition: transform .2s ease
+}
+
+.sidebar-footer {
+    padding-bottom: max(.75rem, env(safe-area-inset-bottom))
+}
+
+.sidebar-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 9998;
+    border: 0;
+    background: rgb(15 23 42 / .42)
 }
 
 .sidebar-scroll {
@@ -202,6 +256,31 @@
         font-size: 1rem;
     }
 
+    .sidebar-panel.sidebar-collapsed .sidebar-module {
+        margin-top: .35rem
+    }
+
+    .sidebar-panel.sidebar-collapsed .sidebar-group {
+        justify-content: center;
+        padding-right: .65rem;
+        padding-left: .65rem
+    }
+
+    .sidebar-panel.sidebar-collapsed .sidebar-group-name {
+        gap: 0
+    }
+
+    .sidebar-panel.sidebar-collapsed .sidebar-group-name span,
+    .sidebar-panel.sidebar-collapsed .sidebar-group-chevron {
+        display: none
+    }
+
+    .sidebar-panel.sidebar-collapsed .sidebar-submenu {
+        margin-left: 0;
+        padding-left: 0;
+        border-left: 0
+    }
+
     .sidebar-panel.sidebar-collapsed .sidebar-collapse-toggle {
         margin-left: 0;
     }
@@ -217,7 +296,9 @@
 
 @media (max-width:1023px) {
     .sidebar-panel {
-        transform: translateX(-100%) !important
+        width: min(18rem, calc(100vw - 2.5rem)) !important;
+        transform: translateX(-100%) !important;
+        box-shadow: 18px 0 45px rgb(15 23 42 / .18) !important
     }
 
     .sidebar-panel.sidebar-open {

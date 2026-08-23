@@ -102,10 +102,11 @@ class PlanillaAuditoriaModel
     private function controles(): array
     {
         $consultas = [
-            ['nombre'=>'Saldos inconsistentes','detalle'=>'Neto menos pagado no coincide con el saldo pendiente.','sql'=>"SELECT COUNT(*) FROM planilla_detalles WHERE ABS(monto_pagar-monto_pagado-saldo_pendiente)>0.01"],
+            ['nombre'=>'Saldos inconsistentes','detalle'=>'Neto menos pagado y excluido no coincide con el saldo pendiente.','sql'=>"SELECT COUNT(*) FROM planilla_detalles WHERE ABS(monto_pagar-monto_pagado-monto_excluido-saldo_pendiente)>0.01"],
             ['nombre'=>'Pagos sin conciliar','detalle'=>'El acumulado de pagos vigentes no coincide con el monto pagado.','sql'=>"SELECT COUNT(*) FROM planilla_detalles pd LEFT JOIN (SELECT id_planilla_detalle,SUM(importe) total FROM pagos_planilla WHERE estado='REGISTRADO' GROUP BY id_planilla_detalle) pg ON pg.id_planilla_detalle=pd.id_planilla_detalle WHERE ABS(pd.monto_pagado-COALESCE(pg.total,0))>0.01"],
-            ['nombre'=>'Períodos pagados con deuda','detalle'=>'Un período figura pagado y todavía contiene deuda.','sql'=>"SELECT COUNT(*) FROM periodos_pago pp WHERE pp.estado='PAGADO' AND EXISTS(SELECT 1 FROM planilla_detalles pd WHERE pd.id_periodo_pago=pp.id_periodo_pago AND pd.saldo_pendiente>0.01)"],
-            ['nombre'=>'Cierres sin responsable','detalle'=>'Planillas cerradas o pagadas sin usuario o fecha de cierre.','sql'=>"SELECT COUNT(*) FROM periodos_pago WHERE estado IN('CERRADO','PAGADO') AND (cerrado_por IS NULL OR cerrado_en IS NULL)"],
+            ['nombre'=>'Períodos resueltos con deuda','detalle'=>'Un período figura pagado o finalizado y todavía contiene deuda.','sql'=>"SELECT COUNT(*) FROM periodos_pago pp WHERE pp.estado IN('PAGADO','FINALIZADO') AND EXISTS(SELECT 1 FROM planilla_detalles pd WHERE pd.id_periodo_pago=pp.id_periodo_pago AND pd.saldo_pendiente>0.01)"],
+            ['nombre'=>'Cierres sin responsable','detalle'=>'Planillas cerradas, pagadas o finalizadas sin usuario o fecha de cierre.','sql'=>"SELECT COUNT(*) FROM periodos_pago WHERE estado IN('CERRADO','PAGADO','FINALIZADO') AND (cerrado_por IS NULL OR cerrado_en IS NULL)"],
+            ['nombre'=>'Exclusiones sin trazabilidad','detalle'=>'Saldos excluidos sin motivo, responsable o importe asociado.','sql'=>"SELECT COUNT(*) FROM planilla_detalles WHERE decision_pago='EXCLUIDO' AND (monto_excluido<=0 OR decision_motivo IS NULL OR decision_por IS NULL OR decision_en IS NULL)"],
             ['nombre'=>'Pagos sin responsable','detalle'=>'Pagos registrados sin identificar al usuario responsable.','sql'=>"SELECT COUNT(*) FROM pagos_planilla WHERE pagado_por IS NULL"],
         ];
         foreach ($consultas as &$control) {

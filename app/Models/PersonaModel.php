@@ -13,6 +13,29 @@ class PersonaModel
     {
         $sql = 'SELECT p.id_persona, p.tipo_documento, p.numero_documento, p.codigo_trabajador, p.nombres,
                        p.apellidos, p.telefono, p.correo, p.estado,
+                       (SELECT m.codigo_alumno FROM matriculas m
+                        INNER JOIN periodos_academicos pa ON pa.id_periodo_academico=m.id_periodo_academico
+                        WHERE m.id_persona=p.id_persona AND m.estado="ACTIVO" AND pa.estado="ACTIVO"
+                        ORDER BY m.fecha_matricula DESC,m.id_matricula DESC LIMIT 1) AS codigo_alumno,
+                       (SELECT CONCAT(n.nombre," · ",g.nombre," ",s.nombre) FROM matriculas m
+                        INNER JOIN periodos_academicos pa ON pa.id_periodo_academico=m.id_periodo_academico
+                        INNER JOIN secciones s ON s.id_seccion=m.id_seccion
+                        INNER JOIN grados g ON g.id_grado=s.id_grado
+                        INNER JOIN niveles n ON n.id_nivel=g.id_nivel
+                        WHERE m.id_persona=p.id_persona AND m.estado="ACTIVO" AND pa.estado="ACTIVO"
+                        ORDER BY m.fecha_matricula DESC,m.id_matricula DESC LIMIT 1) AS ubicacion_academica,
+                       (SELECT CONCAT(ap.apellidos,", ",ap.nombres) FROM alumno_apoderado aa
+                        INNER JOIN personas ap ON ap.id_persona=aa.id_apoderado
+                        WHERE aa.id_alumno=p.id_persona AND aa.estado="ACTIVO"
+                        ORDER BY aa.es_principal DESC,aa.responsable_economico DESC,aa.id_alumno_apoderado LIMIT 1) AS apoderado_principal,
+                       (SELECT aa.parentesco FROM alumno_apoderado aa
+                        WHERE aa.id_alumno=p.id_persona AND aa.estado="ACTIVO"
+                        ORDER BY aa.es_principal DESC,aa.responsable_economico DESC,aa.id_alumno_apoderado LIMIT 1) AS apoderado_parentesco,
+                       (SELECT ap.telefono FROM alumno_apoderado aa INNER JOIN personas ap ON ap.id_persona=aa.id_apoderado
+                        WHERE aa.id_alumno=p.id_persona AND aa.estado="ACTIVO"
+                        ORDER BY aa.es_principal DESC,aa.responsable_economico DESC,aa.id_alumno_apoderado LIMIT 1) AS apoderado_telefono,
+                       (SELECT GREATEST(COUNT(*)-1,0) FROM alumno_apoderado aa
+                        WHERE aa.id_alumno=p.id_persona AND aa.estado="ACTIVO") AS apoderados_adicionales,
                        (SELECT GROUP_CONCAT(DISTINCT COALESCE(c.nombre, v.tipo) ORDER BY c.nombre SEPARATOR ", ")
                         FROM vinculos_laborales v LEFT JOIN cargos c ON c.id_cargo=v.id_cargo
                         WHERE v.id_persona=p.id_persona AND v.estado="ACTIVO") AS cargo,

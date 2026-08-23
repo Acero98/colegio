@@ -1,31 +1,48 @@
-<?php $flash = $_SESSION['flash'] ?? null;
-unset($_SESSION['flash']); ?>
+<?php
+$flash=$_SESSION['flash']??null; unset($_SESSION['flash']);
+$institucion = institucionActual();
+$nombreInstitucion = $institucion['nombre_corto'] ?: $institucion['nombre'];
+$lemaInstitucion = $institucion['lema'] ?: 'Gestión institucional';
+?>
 <!doctype html>
 <html lang="es">
-
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Ingreso · <?= SISTEMA_NOMBRE ?></title>
+    <meta name="theme-color" content="#1d4ed8">
+    <title>Ingreso · <?= htmlspecialchars($nombreInstitucion) ?></title>
     <link rel="stylesheet" href="<?= BASE_URL ?>assets/css/inter.css">
     <link rel="stylesheet" href="<?= BASE_URL ?>assets/css/bootstrap-icons.min.css">
-    <link rel="stylesheet" href="<?= BASE_URL ?>assets/css/output.css">
+    <style>
+        *{box-sizing:border-box}body{margin:0;min-height:100vh;min-height:100dvh;font-family:Inter,system-ui,sans-serif;color:#172554;background:#eef4ff}.login-shell{min-height:100vh;min-height:100dvh;display:grid;grid-template-columns:minmax(0,1.08fr) minmax(420px,.92fr)}.login-visual{position:relative;overflow:hidden;display:flex;flex-direction:column;justify-content:space-between;padding:clamp(2rem,5vw,5rem);color:#fff;background:linear-gradient(145deg,#172554 0%,#1d4ed8 55%,#0891b2 100%)}.login-visual:before,.login-visual:after{content:"";position:absolute;border-radius:999px;border:1px solid rgb(255 255 255 / .14)}.login-visual:before{width:38rem;height:38rem;right:-15rem;top:-17rem}.login-visual:after{width:27rem;height:27rem;left:-12rem;bottom:-14rem}.brand{position:relative;z-index:1;display:flex;align-items:center;gap:.85rem}.brand-icon{display:grid;width:3rem;height:3rem;place-items:center;border-radius:1rem;background:rgb(255 255 255 / .16);border:1px solid rgb(255 255 255 / .2);font-size:1.3rem;box-shadow:0 12px 35px rgb(15 23 42 / .2)}.brand strong{display:block;font-size:1rem}.brand small{color:#bfdbfe}.visual-copy{position:relative;z-index:1;max-width:39rem}.visual-copy p:first-child{display:inline-flex;border-radius:999px;background:rgb(255 255 255 / .12);padding:.45rem .75rem;font-size:.75rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase}.visual-copy h1{max-width:34rem;margin:1.15rem 0 .85rem;font-size:clamp(2.2rem,4.5vw,4.25rem);line-height:1.02;letter-spacing:-.045em}.visual-copy>p:last-of-type{max-width:34rem;color:#dbeafe;font-size:1rem;line-height:1.75}.visual-features{display:grid;grid-template-columns:repeat(3,1fr);gap:.75rem;margin-top:2rem}.visual-feature{border-radius:1rem;padding:1rem;background:rgb(255 255 255 / .1);border:1px solid rgb(255 255 255 / .13);backdrop-filter:blur(8px)}.visual-feature i{display:block;margin-bottom:.6rem;color:#a5f3fc;font-size:1.15rem}.visual-feature span{font-size:.78rem;font-weight:600}.visual-footer{position:relative;z-index:1;color:#bfdbfe;font-size:.75rem}.login-area{display:grid;place-items:center;padding:clamp(1.25rem,5vw,5rem);background:radial-gradient(circle at 100% 0,#dbeafe 0,transparent 34%),#f8fafc}.login-card{width:100%;max-width:28rem}.mobile-brand{display:none}.login-card h2{margin:0;font-size:1.9rem;letter-spacing:-.035em;color:#0f172a}.login-card .intro{margin:.65rem 0 2rem;color:#64748b;line-height:1.55}.field{display:block;margin-top:1rem;color:#334155;font-size:.84rem;font-weight:650}.input-wrap{position:relative;margin-top:.45rem}.input-wrap>i{position:absolute;left:1rem;top:50%;transform:translateY(-50%);color:#94a3b8}.input-wrap input{width:100%;height:3.2rem;border:1px solid #cbd5e1;border-radius:.9rem;background:#fff;padding:0 3rem;color:#0f172a;font:inherit;outline:0;transition:.18s}.input-wrap input:focus{border-color:#3b82f6;box-shadow:0 0 0 4px #dbeafe}.toggle-password{position:absolute;right:.5rem;top:50%;transform:translateY(-50%);display:grid;width:2.25rem;height:2.25rem;place-items:center;border:0;border-radius:.65rem;background:transparent;color:#64748b;cursor:pointer}.toggle-password:hover{background:#eff6ff;color:#2563eb}.form-options{display:flex;align-items:center;justify-content:space-between;gap:1rem;margin:1rem 0 1.25rem;color:#64748b;font-size:.78rem}.remember{display:flex;align-items:center;gap:.5rem;cursor:pointer}.remember input{width:1rem;height:1rem;accent-color:#2563eb}.secure-label{display:flex;align-items:center;gap:.35rem;color:#047857}.login-submit{display:flex;width:100%;height:3.2rem;align-items:center;justify-content:center;gap:.55rem;border:0;border-radius:.9rem;background:linear-gradient(135deg,#2563eb,#0891b2);color:#fff;font:inherit;font-weight:750;box-shadow:0 12px 28px rgb(37 99 235 / .24);cursor:pointer;transition:.18s}.login-submit:hover{transform:translateY(-1px);box-shadow:0 15px 32px rgb(37 99 235 / .3)}.login-submit:disabled{cursor:wait;opacity:.72;transform:none}.caps-warning{display:none;margin:.55rem 0 0;color:#b45309;font-size:.75rem}.caps-warning.visible{display:block}.login-note{margin-top:1.4rem;text-align:center;color:#94a3b8;font-size:.74rem;line-height:1.55}.login-alert{margin-bottom:1.25rem;border:1px solid #fecaca;border-radius:.9rem;background:#fff1f2;padding:.85rem 1rem;color:#be123c;font-size:.82rem}.login-alert i{margin-right:.35rem}@media(max-width:900px){.login-shell{grid-template-columns:1fr}.login-visual{display:none}.login-area{padding:1.25rem}.mobile-brand{display:flex;align-items:center;gap:.75rem;margin-bottom:2rem}.mobile-brand .brand-icon{color:#fff;background:linear-gradient(135deg,#2563eb,#0891b2)}.mobile-brand small{display:block;color:#64748b}.login-card{max-width:30rem;padding:1.5rem;border:1px solid #e2e8f0;border-radius:1.5rem;background:rgb(255 255 255 / .94);box-shadow:0 22px 60px rgb(15 23 42 / .1)}}@media(max-width:420px){.login-area{padding:.75rem}.login-card{padding:1.25rem}.login-card h2{font-size:1.55rem}.form-options{align-items:flex-start;flex-direction:column;gap:.65rem}}
+        .brand-icon{overflow:hidden}.brand-icon img{width:100%;height:100%;background:#fff;object-fit:contain}
+    </style>
 </head>
-
-<body class="grid min-h-screen place-items-center bg-gradient-to-br from-blue-50 via-slate-50 to-cyan-50 p-4 font-[Inter]">
-    <section class="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-8 shadow-xl shadow-slate-200/60">
-        <div class="mb-7 text-center"><span class="inline-grid h-14 w-14 place-items-center rounded-2xl bg-blue-600 text-2xl text-white"><i class="bi bi-mortarboard-fill"></i></span>
-            <h1 class="mt-4 text-xl font-bold">Bienvenido</h1>
-            <p class="mt-1 text-sm text-slate-500"><?= SISTEMA_NOMBRE ?></p>
-        </div>
-        <form method="post" action="index.php?url=auth" class="space-y-4">
-            <?= campoCsrf() ?>
-            <label class="block text-sm font-medium">Usuario<input required name="usuario" autocomplete="username" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5 outline-none focus:border-blue-500"></label>
-            <label class="block text-sm font-medium">Contraseña<input required type="password" name="contrasena" autocomplete="current-password" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5 outline-none focus:border-blue-500"></label>
-            <button class="w-full rounded-xl bg-blue-600 px-4 py-3 font-semibold text-white hover:bg-blue-700">Ingresar</button>
-        </form>
+<body>
+<main class="login-shell">
+    <section class="login-visual" aria-label="Presentación del sistema">
+        <div class="brand"><span class="brand-icon"><?php if (!empty($institucion['logo'])): ?><img src="index.php?url=institucion_logo" alt="Logo"><?php else: ?><i class="bi bi-mortarboard-fill"></i><?php endif; ?></span><span><strong><?= htmlspecialchars($nombreInstitucion) ?></strong><small><?= htmlspecialchars(SISTEMA_NOMBRE) ?></small></span></div>
+        <div class="visual-copy"><p>Gestión institucional</p><h1>El colegio organizado en un solo lugar.</h1><p>Administre personas, asistencia, matrículas, finanzas y planilla con información centralizada, trazable y preparada para cada jornada.</p><div class="visual-features"><div class="visual-feature"><i class="bi bi-shield-check"></i><span>Acceso por roles</span></div><div class="visual-feature"><i class="bi bi-clock-history"></i><span>Historial auditable</span></div><div class="visual-feature"><i class="bi bi-grid-1x2"></i><span>Módulos integrados</span></div></div></div>
+        <p class="visual-footer"><i class="bi bi-lock-fill"></i> Conexión institucional protegida</p>
     </section>
-    <?php if ($flash): ?><p class="fixed bottom-5 rounded-xl bg-red-600 px-4 py-3 text-sm text-white"><?= htmlspecialchars($flash['texto']) ?></p><?php endif; ?>
+    <section class="login-area">
+        <div class="login-card">
+            <div class="mobile-brand"><span class="brand-icon"><?php if (!empty($institucion['logo'])): ?><img src="index.php?url=institucion_logo" alt="Logo"><?php else: ?><i class="bi bi-mortarboard-fill"></i><?php endif; ?></span><span><strong><?= htmlspecialchars($nombreInstitucion) ?></strong><small><?= htmlspecialchars($lemaInstitucion) ?></small></span></div>
+            <h2>Bienvenido nuevamente</h2><p class="intro">Ingrese sus credenciales para continuar al panel correspondiente a su función.</p>
+            <?php if ($flash): ?><div class="login-alert" role="alert"><i class="bi bi-exclamation-circle-fill"></i><?= htmlspecialchars($flash['texto']) ?></div><?php endif; ?>
+            <form id="login-form" method="post" action="index.php?url=auth">
+                <?= campoCsrf() ?>
+                <label class="field" for="login-usuario">Usuario</label><div class="input-wrap"><i class="bi bi-person"></i><input id="login-usuario" required autofocus name="usuario" autocomplete="username" placeholder="Ingrese su usuario"></div>
+                <label class="field" for="login-contrasena">Contraseña</label><div class="input-wrap"><i class="bi bi-key"></i><input id="login-contrasena" required type="password" name="contrasena" autocomplete="current-password" placeholder="Ingrese su contraseña"><button id="toggle-password" type="button" class="toggle-password" aria-label="Mostrar contraseña" title="Mostrar contraseña"><i class="bi bi-eye"></i></button></div><p id="caps-warning" class="caps-warning"><i class="bi bi-exclamation-triangle"></i> Bloq Mayús está activado.</p>
+                <div class="form-options"><label class="remember"><input id="recordar-usuario" type="checkbox"> Recordar usuario en este equipo</label><span class="secure-label"><i class="bi bi-shield-lock"></i> Acceso seguro</span></div>
+                <button id="login-submit" class="login-submit"><i class="bi bi-box-arrow-in-right"></i><span>Ingresar al sistema</span></button>
+            </form>
+            <p class="login-note">Las acciones realizadas dentro del sistema pueden quedar registradas para fines de seguridad y auditoría institucional.</p>
+        </div>
+    </section>
+</main>
+<script>
+(()=>{const form=document.getElementById('login-form'),usuario=document.getElementById('login-usuario'),clave=document.getElementById('login-contrasena'),recordar=document.getElementById('recordar-usuario'),toggle=document.getElementById('toggle-password'),aviso=document.getElementById('caps-warning'),boton=document.getElementById('login-submit'),guardado=localStorage.getItem('colegio-login-usuario');if(guardado){usuario.value=guardado;recordar.checked=true;clave.focus()}toggle.addEventListener('click',()=>{const mostrar=clave.type==='password';clave.type=mostrar?'text':'password';toggle.innerHTML=`<i class="bi bi-${mostrar?'eye-slash':'eye'}"></i>`;toggle.setAttribute('aria-label',mostrar?'Ocultar contraseña':'Mostrar contraseña');toggle.title=toggle.getAttribute('aria-label')});clave.addEventListener('keyup',e=>aviso.classList.toggle('visible',e.getModifierState&&e.getModifierState('CapsLock')));form.addEventListener('submit',()=>{if(recordar.checked)localStorage.setItem('colegio-login-usuario',usuario.value.trim());else localStorage.removeItem('colegio-login-usuario');boton.disabled=true;boton.querySelector('i').className='bi bi-arrow-repeat';boton.querySelector('span').textContent='Verificando acceso...'});})();
+</script>
 </body>
-
 </html>

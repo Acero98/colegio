@@ -46,13 +46,14 @@ document.addEventListener('DOMContentLoaded', () => {
         'planilla-ajuste-guardar': { titulo: '¿Deseas agregar este ajuste?', texto: 'El importe modificará el neto del trabajador y quedará registrado.', boton: 'Sí, agregar', color: '#7c3aed' },
         'planilla-ajuste-anular': { titulo: '¿Deseas anular este ajuste?', texto: 'El importe se revertirá conservando el historial.', boton: 'Sí, anular', color: '#e11d48' },
         'planilla-aprobar': { titulo: '¿Deseas aprobar la revisión?', texto: 'La planilla quedará protegida y ya no admitirá ajustes ni recálculos.', boton: 'Sí, aprobar', color: '#059669' },
-        'planilla-cerrar': { titulo: '¿Deseas cerrar esta planilla?', texto: 'El cierre es definitivo para este período y habilitará el registro de pagos.', boton: 'Sí, cerrar', color: '#1e293b' },
+        'planilla-cerrar': { titulo: '¿Deseas cerrar el cálculo?', texto: 'Los importes quedarán protegidos y se habilitará el registro de pagos. Cerrar el cálculo no significa que todos fueron pagados.', boton: 'Sí, cerrar cálculo', color: '#1e293b' },
         'planilla-pago-registrar': { titulo: '¿Deseas registrar este pago?', texto: 'El importe se aplicará al saldo del trabajador.', boton: 'Sí, registrar', color: '#059669' },
         'planilla-pago-anular': { titulo: '¿Deseas anular este pago?', texto: 'El saldo del trabajador se restaurará y la anulación quedará registrada.', boton: 'Sí, anular', color: '#e11d48' },
         'calendario-guardar': { titulo: '¿Deseas registrar esta fecha?', texto: 'Se excluirá de los días exigibles mientras permanezca activa.', boton: 'Sí, registrar', color: '#2563eb' },
         'calendario-editar': { titulo: '¿Deseas guardar los cambios?', texto: 'El cambio se aplicará a procesos abiertos y futuros.', boton: 'Sí, guardar cambios', color: '#f59e0b' },
         'calendario-desactivar': { titulo: '¿Deseas desactivar esta fecha?', texto: 'Volverá a considerarse como día laborable en nuevos cálculos.', boton: 'Sí, desactivar', color: '#e11d48' },
         'calendario-activar': { titulo: '¿Deseas activar esta fecha?', texto: 'Se excluirá de la asistencia y la planilla en nuevos cálculos.', boton: 'Sí, activar', color: '#059669' },
+        'institucion-guardar': { titulo: '¿Deseas actualizar los datos institucionales?', texto: 'El nombre, contacto y logotipo se mostrarán en el sistema y en los nuevos documentos.', boton: 'Sí, actualizar', color: '#2563eb' },
         ACTIVAR: { titulo: '¿Deseas activar a esta persona?', texto: 'Volverá a estar disponible en el sistema.', boton: 'Sí, activar', color: '#059669' },
         INACTIVO: { titulo: '¿Deseas desactivar a esta persona?', texto: 'Dejará de estar disponible para nuevos procesos.', boton: 'Sí, desactivar', color: '#dc2626' },
         'academico-guardar': { titulo: '¿Deseas agregar este registro académico?', texto: 'Se incorporará a la estructura académica.', boton: 'Sí, agregar', color: '#2563eb' },
@@ -63,8 +64,16 @@ document.addEventListener('DOMContentLoaded', () => {
         'matricula-editar': { titulo: '¿Deseas guardar los cambios?', texto: 'Se actualizará la matrícula y se validará el cupo si corresponde.', boton: 'Sí, guardar cambios', color: '#d97706' },
         'promocion-procesar': { titulo: '¿Deseas procesar la promoción?', texto: 'Se crearán las nuevas matrículas y se aplicarán promociones, repitencias, retiros o egresos.', boton: 'Sí, procesar', color: '#2563eb' },
         'asistencia-manual': { titulo: '¿Deseas guardar la asistencia manual?', texto: 'Se actualizará el registro de todos los alumnos de la sección.', boton: 'Sí, guardar', color: '#2563eb' },
-        'asistencia-cerrar': { titulo: '¿Deseas cerrar la asistencia de hoy?', texto: 'Los alumnos activos sin registro serán marcados como falta.', boton: 'Sí, cerrar día', color: '#d97706' },
-        'asistencia-cerrar-personal': { titulo: '¿Deseas cerrar la asistencia del personal?', texto: 'Se registrarán faltas de jornadas y sesiones que no tengan marcación.', boton: 'Sí, cerrar personal', color: '#7c3aed' }
+        'asistencia-cerrar': { titulo: '¿Deseas cerrar la fecha seleccionada?', texto: 'Los alumnos activos sin registro serán marcados como falta. Después, las correcciones se realizarán mediante incidencias.', boton: 'Sí, cerrar fecha', color: '#d97706' },
+        'asistencia-cerrar-personal': { titulo: '¿Deseas cerrar la fecha seleccionada?', texto: 'Se registrarán faltas de jornadas y sesiones sin marcación. No podrá cerrarse si la planilla del período está cerrada.', boton: 'Sí, cerrar personal', color: '#7c3aed' }
+        , 'config-jornada-guardar': { titulo: '¿Deseas guardar esta jornada?', texto: 'Quedará disponible para las asignaciones y marcaciones.', boton: 'Sí, guardar', color: '#2563eb' }
+        , 'config-jornada-editar': { titulo: '¿Deseas actualizar esta jornada?', texto: 'Los cambios se aplicarán a procesos abiertos y marcaciones posteriores.', boton: 'Sí, actualizar', color: '#f59e0b' }
+        , 'config-jornada-desactivar': { titulo: '¿Deseas desactivar esta jornada?', texto: 'Dejará de estar disponible para nuevas marcaciones y asignaciones.', boton: 'Sí, desactivar', color: '#e11d48' }
+        , 'config-jornada-activar': { titulo: '¿Deseas activar esta jornada?', texto: 'Volverá a estar disponible para su uso.', boton: 'Sí, activar', color: '#059669' }
+        , 'config-dispositivo-guardar': { titulo: '¿Deseas autorizar este dispositivo?', texto: 'El equipo aparecerá como disponible en la pantalla de escaneo.', boton: 'Sí, autorizar', color: '#0891b2' }
+        , 'config-dispositivo-editar': { titulo: '¿Deseas actualizar este dispositivo?', texto: 'Se guardarán el nombre, código permitido y punto de control.', boton: 'Sí, actualizar', color: '#f59e0b' }
+        , 'config-dispositivo-desactivar': { titulo: '¿Deseas desactivar este dispositivo?', texto: 'Dejará de aparecer en la pantalla de escaneo, conservando sus marcaciones.', boton: 'Sí, desactivar', color: '#e11d48' }
+        , 'config-dispositivo-activar': { titulo: '¿Deseas activar este dispositivo?', texto: 'Volverá a estar autorizado para registrar marcaciones.', boton: 'Sí, activar', color: '#059669' }
         , 'horario-guardar': { titulo: '¿Deseas guardar este horario?', texto: 'La jornada o sesión quedará disponible para el control de asistencia.', boton: 'Sí, guardar', color: '#2563eb' },
         'horario-editar': { titulo: '¿Deseas guardar los cambios?', texto: 'Se actualizará la configuración del horario.', boton: 'Sí, guardar cambios', color: '#d97706' },
         'horario-desactivar': { titulo: '¿Deseas desactivar esta jornada?', texto: 'Dejará de permitir nuevas marcaciones.', boton: 'Sí, desactivar', color: '#dc2626' },
@@ -81,7 +90,13 @@ document.addEventListener('DOMContentLoaded', () => {
         , 'pago-anular': { titulo: '¿Anular este recibo?', texto: 'Los saldos de las deudas se restaurarán y el recibo quedará en historial.', boton: 'Sí, anular recibo', color: '#dc2626' }
         , 'ajuste-cobro': { titulo: '¿Registrar este ajuste?', texto: 'Se actualizará el saldo y quedará registrado en el historial financiero.', boton: 'Sí, registrar ajuste', color: '#d97706' }
         , 'cierre-caja': { titulo: '¿Cerrar esta caja?', texto: 'El cierre quedará registrado y la caja de hoy no aceptará nuevos pagos.', boton: 'Sí, cerrar caja', color: '#7c3aed' }
+        , 'caja-rectificar': { titulo: '¿Registrar esta revisión del cierre?', texto: 'El cierre no se reabrirá y los valores anteriores permanecerán en el historial.', boton: 'Sí, registrar revisión', color: '#7c3aed' }
         , 'apertura-caja': { titulo: '¿Abrir esta caja?', texto: 'Podrás registrar cobros hasta que se realice el cierre.', boton: 'Sí, abrir caja', color: '#059669' }
+        , 'movimiento-financiero-guardar': { titulo: '¿Registrar este movimiento?', texto: 'Se incorporará al flujo financiero y quedará identificado el responsable.', boton: 'Sí, registrar', color: '#2563eb' }
+        , 'movimiento-financiero-anular': { titulo: '¿Anular este movimiento?', texto: 'No se eliminará: permanecerá visible en el historial financiero.', boton: 'Sí, anular', color: '#dc2626' }
+        , 'categoria-financiera-guardar': { titulo: '¿Crear esta categoría?', texto: 'Quedará disponible para nuevos ingresos o egresos.', boton: 'Sí, crear', color: '#2563eb' }
+        , 'categoria-financiera-desactivar': { titulo: '¿Desactivar esta categoría?', texto: 'No se podrá usar en nuevos movimientos, pero conservará su historial.', boton: 'Sí, desactivar', color: '#d97706' }
+        , 'categoria-financiera-activar': { titulo: '¿Activar esta categoría?', texto: 'Volverá a estar disponible para nuevos movimientos.', boton: 'Sí, activar', color: '#059669' }
     };
     document.querySelectorAll('form[action*="academico_guardar"]').forEach((formulario) => { formulario.dataset.confirmarAccion = 'academico-guardar'; });
     document.querySelectorAll('form[action*="academico_actualizar"]').forEach((formulario) => { formulario.dataset.confirmarAccion = 'academico-editar'; });

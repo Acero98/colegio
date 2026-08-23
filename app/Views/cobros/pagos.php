@@ -8,9 +8,10 @@
 </div>
 <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
     <div class="overflow-x-auto">
-        <table id="tablaPagos" class="min-w-full text-left text-sm">
+        <table id="tablaPagos" data-datatable data-page-options="5,10,25,50" data-order="2:desc" class="min-w-full text-left text-sm">
             <thead class="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
                 <tr>
+                    <th class="no-sort px-5 py-4">N°</th>
                     <th class="px-5 py-4">Recibo</th>
                     <th class="px-5 py-4">Fecha</th>
                     <th class="px-5 py-4">Apoderado</th>
@@ -18,20 +19,21 @@
                     <th class="px-5 py-4">Deudas</th>
                     <th class="px-5 py-4">Importe</th>
                     <th class="px-5 py-4">Estado</th>
-                    <th class="px-5 py-4">Acción</th>
+                    <th class="no-sort px-5 py-4">Acción</th>
                 </tr>
             </thead>
-            <tbody class="divide-y divide-slate-100"><?php foreach ($pagos as $pago): ?><tr>
+            <tbody class="divide-y divide-slate-100"><?php foreach ($pagos as $indice => $pago): ?><tr>
+                        <td class="px-5 py-4 text-center text-slate-500"><?= $indice + 1 ?></td>
                         <td class="px-5 py-4 font-semibold"><?= htmlspecialchars($pago['numero_recibo']) ?></td>
                         <td class="px-5 py-4"><?= htmlspecialchars($pago['fecha_pago']) ?></td>
                         <td class="px-5 py-4"><?= htmlspecialchars(trim($pago['apoderado'], ', ') ?: 'Sin apoderado') ?></td>
-                        <td class="px-5 py-4"><?= htmlspecialchars($pago['medio_pago']) ?></td>
+                        <td class="px-5 py-4"><?= htmlspecialchars($pago['medios_resumen'] ?: $pago['medio_pago']) ?><?php if ((float)$pago['vuelto'] > 0): ?><span class="block text-xs text-emerald-700">Vuelto S/ <?= number_format((float)$pago['vuelto'], 2) ?></span><?php endif; ?><?php if ((int)$pago['evidencias'] > 0): ?><span class="mt-1 inline-flex items-center rounded-full bg-blue-50 px-2 py-1 text-xs font-semibold text-blue-700"><i class="bi bi-camera mr-1"></i><?= (int)$pago['evidencias'] ?> evidencia(s)</span><?php endif; ?></td>
                         <td class="px-5 py-4 text-center"><?= $pago['deudas'] ?></td>
                         <td class="px-5 py-4 font-semibold">S/ <?= number_format((float)$pago['importe_total'], 2) ?></td>
                         <td class="px-5 py-4"><span class="rounded-full px-2 py-1 text-xs font-semibold <?= $colores[$pago['estado']] ?>"><?= $pago['estado'] ?></span><?php if ($pago['motivo_anulacion']): ?><span class="mt-1 block text-xs text-slate-500"><?= htmlspecialchars($pago['motivo_anulacion']) ?></span><?php endif; ?></td>
-                        <td class="px-5 py-4"><?php if ($pago['estado'] === 'REGISTRADO'): ?><button type="button" onclick="anularRecibo(<?= $pago['id_pago'] ?>,'<?= htmlspecialchars($pago['numero_recibo'], ENT_QUOTES) ?>')" class="rounded-lg bg-red-100 px-3 py-2 text-xs font-semibold text-red-700">Anular</button><?php endif; ?></td>
+                        <td class="px-5 py-4"><div class="flex flex-wrap gap-2"><a target="_blank" href="index.php?url=cobros_recibo&id=<?= $pago['id_pago'] ?>" class="inline-flex min-w-20 items-center justify-center rounded-lg bg-blue-100 px-3 py-2 text-xs font-semibold text-blue-700"><i class="bi bi-printer mr-1"></i> Recibo</a><?php if ($pago['estado'] === 'REGISTRADO'): ?><button type="button" onclick="anularRecibo(<?= $pago['id_pago'] ?>,'<?= htmlspecialchars($pago['numero_recibo'], ENT_QUOTES) ?>')" class="inline-flex min-w-20 items-center justify-center rounded-lg bg-red-100 px-3 py-2 text-xs font-semibold text-red-700">Anular</button><?php endif; ?></div></td>
                     </tr><?php endforeach; ?><?php if (!$pagos): ?><tr>
-                        <td colspan="8" class="px-5 py-12 text-center text-slate-500">Aún no hay pagos registrados.</td>
+                        <td colspan="9" class="px-5 py-12 text-center text-slate-500">Aún no hay pagos registrados.</td>
                     </tr><?php endif; ?></tbody>
         </table>
     </div>
@@ -49,19 +51,4 @@
         document.getElementById('anular-recibo-texto').textContent = 'Recibo ' + numero + '. Esta acción restaurará sus saldos pendientes.';
         document.getElementById('modal-anular-recibo').classList.remove('hidden');
     }
-    document.addEventListener('DOMContentLoaded', function() {
-        if (window.simpleDatatables && document.querySelector('#tablaPagos')) new simpleDatatables.DataTable('#tablaPagos', {
-            perPage: 10,
-            perPageSelect: [5, 10, 25, 50],
-            searchable: true,
-            sortable: true,
-            labels: {
-                placeholder: 'Buscar...',
-                perPage: 'Mostrar',
-                noRows: 'No hay registros',
-                noResults: 'No se encontraron resultados',
-                info: 'Mostrando {start} a {end} de {rows} registros'
-            }
-        })
-    });
 </script>

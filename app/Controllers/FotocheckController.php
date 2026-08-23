@@ -50,6 +50,7 @@ class FotocheckController
             header('Location: index.php?url=fotochecks');
             exit;
         }
+        $institucion = institucionActual();
         require __DIR__ . '/../Views/fotochecks/ver.php';
     }
 

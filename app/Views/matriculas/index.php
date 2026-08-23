@@ -10,6 +10,7 @@
         <table data-datatable data-page-options="5,10,25,50" class="min-w-full text-left text-sm">
             <thead class="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
                 <tr>
+                    <th class="no-sort px-5 py-4">N°</th>
                     <th class="px-5 py-4">Código</th>
                     <th class="px-5 py-4">Alumno</th>
                     <th class="px-5 py-4">Período / sección</th>
@@ -18,7 +19,8 @@
                     <th class="no-sort px-5 py-4">Acciones</th>
                 </tr>
             </thead>
-            <tbody class="divide-y divide-slate-100"><?php foreach ($matriculas as $matricula): ?><tr>
+            <tbody class="divide-y divide-slate-100"><?php foreach ($matriculas as $indice => $matricula): ?><tr>
+                        <td class="px-5 py-4 text-slate-500"><?= $indice + 1 ?></td>
                         <td class="px-5 py-4 font-mono text-xs"><?= htmlspecialchars($matricula['codigo_alumno']) ?></td>
                         <td class="px-5 py-4 font-medium"><?= htmlspecialchars($matricula['alumno']) ?></td>
                         <td class="px-5 py-4"><?= htmlspecialchars($matricula['periodo']) ?><span class="block text-xs text-slate-500"><?= htmlspecialchars($matricula['seccion']) ?></span></td>
@@ -26,7 +28,7 @@
                         <td class="px-5 py-4"><?php $clasesEstado = ['ACTIVO' => 'bg-emerald-100 text-emerald-700', 'RETIRADO' => 'bg-amber-100 text-amber-800', 'ANULADO' => 'bg-red-100 text-red-700', 'EGRESADO' => 'bg-blue-100 text-blue-700']; ?><span class="rounded-full px-2 py-1 text-xs font-semibold <?= $clasesEstado[$matricula['estado']] ?? 'bg-slate-100 text-slate-600' ?>"><?= htmlspecialchars($matricula['estado']) ?></span></td>
                         <td class="px-5 py-4"><button type="button" class="btn-editar" title="Gestionar matrícula" data-id="<?= $matricula['id_matricula'] ?>" data-periodo="<?= $matricula['id_periodo_academico'] ?>" data-seccion="<?= $matricula['id_seccion'] ?>" data-codigo="<?= htmlspecialchars($matricula['codigo_alumno'], ENT_QUOTES) ?>" data-fecha="<?= $matricula['fecha_matricula'] ?>" data-estado="<?= $matricula['estado'] ?>" onclick="editarMatricula(this)"><i class="bi bi-pencil-square"></i></button></td>
                     </tr><?php endforeach; ?><?php if (!$matriculas): ?><tr>
-                        <td colspan="6" class="px-5 py-12 text-center text-slate-500">Aún no hay matrículas registradas.</td>
+                        <td colspan="7" class="px-5 py-12 text-center text-slate-500">Aún no hay matrículas registradas.</td>
                     </tr><?php endif; ?></tbody>
         </table>
     </div>

@@ -113,7 +113,7 @@ class CobroModel
     public function reportesFinancieros(string $desde, string $hasta): array
     {
         $rango = [':desde' => $desde . ' 00:00:00', ':hasta' => $hasta . ' 23:59:59'];
-        $caja = $this->db->prepare("SELECT DATE(fecha_pago) AS fecha,medio_pago,COUNT(*) AS operaciones,SUM(importe_total) AS total FROM pagos_alumno WHERE estado='REGISTRADO' AND fecha_pago BETWEEN :desde AND :hasta GROUP BY DATE(fecha_pago),medio_pago ORDER BY fecha DESC,medio_pago");
+        $caja = $this->db->prepare("SELECT DATE(p.fecha_pago) AS fecha,pm.medio AS medio_pago,COUNT(DISTINCT p.id_pago) AS operaciones,SUM(pm.importe_aplicado) AS total FROM pagos_alumno p INNER JOIN pagos_alumno_medios pm ON pm.id_pago=p.id_pago WHERE p.estado='REGISTRADO' AND p.fecha_pago BETWEEN :desde AND :hasta GROUP BY DATE(p.fecha_pago),pm.medio ORDER BY fecha DESC,medio_pago");
         $caja->execute($rango);
         $conceptos = $this->db->prepare("SELECT c.nombre,c.tipo,COUNT(DISTINCT p.id_pago) AS recibos,SUM(d.importe) AS cobrado FROM pagos_alumno_detalles d INNER JOIN pagos_alumno p ON p.id_pago=d.id_pago INNER JOIN cuentas_cobrar cc ON cc.id_cuenta=d.id_cuenta INNER JOIN conceptos_cobro c ON c.id_concepto_cobro=cc.id_concepto_cobro WHERE p.estado='REGISTRADO' AND p.fecha_pago BETWEEN :desde AND :hasta GROUP BY c.id_concepto_cobro ORDER BY cobrado DESC,c.nombre");
         $conceptos->execute($rango);
@@ -226,7 +226,7 @@ class CobroModel
         }
     }
 
-    public function registrarPago(array $data, int $usuario): string
+    public function registrarPago(array $data, int $usuario): array
     {
         $detalles = $data['detalles'] ?? [];
         if (!is_array($detalles) || !$detalles) {
@@ -234,10 +234,13 @@ class CobroModel
         }
         $this->db->beginTransaction();
         try {
-            $caja = $this->db->prepare("SELECT id_apertura,estado FROM aperturas_caja WHERE estado='ABIERTA' ORDER BY id_apertura DESC LIMIT 1 FOR UPDATE");
+            $caja = $this->db->prepare("SELECT id_apertura,fecha,estado FROM aperturas_caja WHERE estado='ABIERTA' ORDER BY id_apertura DESC LIMIT 1 FOR UPDATE");
             $caja->execute();
             $caja = $caja->fetch();
             if (!$caja) throw new RuntimeException('Primero debe abrir un turno de caja para registrar pagos.');
+            if ($caja['fecha'] !== date('Y-m-d')) {
+                throw new RuntimeException('La caja del ' . $caja['fecha'] . ' sigue abierta. Debe cerrarla y abrir una caja para hoy antes de registrar pagos.');
+            }
             $cuenta = $this->db->prepare("SELECT cc.*, (SELECT aa.id_apoderado FROM matriculas m INNER JOIN alumno_apoderado aa ON aa.id_alumno=m.id_persona AND aa.estado='ACTIVO' WHERE m.id_matricula=cc.id_matricula ORDER BY aa.responsable_economico DESC,aa.es_principal DESC LIMIT 1) AS id_apoderado FROM cuentas_cobrar cc WHERE cc.id_cuenta=:id FOR UPDATE");
             $total = 0.0;
             $cuentas = [];
@@ -264,10 +267,47 @@ class CobroModel
             if (!$cuentas) {
                 throw new RuntimeException('Indique al menos un importe mayor a cero.');
             }
+            $total = round($total, 2);
+            $mediosEntrada = $data['medios'] ?? [];
+            $permitidos = ['EFECTIVO', 'YAPE', 'PLIN', 'TRANSFERENCIA', 'TARJETA', 'DEPOSITO', 'OTRO'];
+            $medios = [];
+            $totalMedios = 0.0;
+            foreach ($permitidos as $medio) {
+                $entrada = is_array($mediosEntrada[$medio] ?? null) ? $mediosEntrada[$medio] : [];
+                $importe = round((float)($entrada['importe'] ?? 0), 2);
+                if ($importe <= 0) continue;
+                $recibido = $medio === 'EFECTIVO' ? round((float)($entrada['recibido'] ?? 0), 2) : $importe;
+                $referencia = trim((string)($entrada['referencia'] ?? ''));
+                if ($medio === 'EFECTIVO' && $recibido < $importe) {
+                    throw new RuntimeException('El efectivo recibido no puede ser menor que el efectivo aplicado al pago.');
+                }
+                $evidencia = $medio !== 'EFECTIVO' ? ($data['evidencias_pago'][$medio] ?? null) : null;
+                if ($medio !== 'EFECTIVO' && $referencia === '' && !$evidencia) {
+                    throw new RuntimeException('Indique una referencia o adjunte evidencia de ' . ucfirst(strtolower($medio)) . '.');
+                }
+                $medios[] = [
+                    'medio' => $medio,
+                    'importe' => $importe,
+                    'recibido' => $recibido,
+                    'vuelto' => $medio === 'EFECTIVO' ? round($recibido - $importe, 2) : 0,
+                    'referencia' => $referencia !== '' ? $referencia : null,
+                    'evidencia' => $evidencia,
+                ];
+                $totalMedios += $importe;
+            }
+            if (!$medios) throw new RuntimeException('Distribuya el pago en al menos un medio de pago.');
+            if (abs(round($totalMedios, 2) - $total) > 0.009) {
+                throw new RuntimeException('La suma de los medios de pago debe ser igual al total aplicado a las deudas.');
+            }
+            $medioResumen = count($medios) > 1 ? 'MIXTO' : $medios[0]['medio'];
             $numero = 'R-' . date('Y') . '-' . str_pad((string) ((int) $this->db->query('SELECT COUNT(*) FROM pagos_alumno WHERE YEAR(fecha_pago)=' . (int) date('Y'))->fetchColumn() + 1), 6, '0', STR_PAD_LEFT);
             $pago = $this->db->prepare("INSERT INTO pagos_alumno(numero_recibo,id_apoderado,id_apertura,fecha_pago,medio_pago,importe_total,estado,registrado_por,observacion) VALUES(:recibo,:apoderado,:apertura,NOW(),:medio,:importe,'REGISTRADO',:usuario,:observacion)");
-            $pago->execute([':recibo' => $numero, ':apoderado' => $idApoderado ?: null, ':apertura' => $caja['id_apertura'], ':medio' => $data['medio_pago'], ':importe' => $total, ':usuario' => $usuario, ':observacion' => trim($data['observacion']) ?: null]);
+            $pago->execute([':recibo' => $numero, ':apoderado' => $idApoderado ?: null, ':apertura' => $caja['id_apertura'], ':medio' => $medioResumen, ':importe' => $total, ':usuario' => $usuario, ':observacion' => trim((string)($data['observacion'] ?? '')) ?: null]);
             $idPago = (int) $this->db->lastInsertId();
+            $guardarMedio = $this->db->prepare('INSERT INTO pagos_alumno_medios(id_pago,medio,importe_aplicado,importe_recibido,vuelto,referencia,evidencia_archivo) VALUES(:pago,:medio,:importe,:recibido,:vuelto,:referencia,:evidencia)');
+            foreach ($medios as $medio) {
+                $guardarMedio->execute([':pago' => $idPago, ':medio' => $medio['medio'], ':importe' => $medio['importe'], ':recibido' => $medio['recibido'], ':vuelto' => $medio['vuelto'], ':referencia' => $medio['referencia'], ':evidencia' => $medio['evidencia']]);
+            }
             $actualizar = $this->db->prepare("UPDATE cuentas_cobrar SET saldo=:saldo,estado=:estado WHERE id_cuenta=:id");
             $detalle = $this->db->prepare('INSERT INTO pagos_alumno_detalles(id_pago,id_cuenta,importe) VALUES(:pago,:cuenta,:importe)');
             foreach ($cuentas as $item) {
@@ -278,7 +318,7 @@ class CobroModel
                 $actualizar->execute([':saldo' => $saldo, ':estado' => $saldo <= 0 ? 'PAGADA' : 'PARCIAL', ':id' => $fila['id_cuenta']]);
             }
             $this->db->commit();
-            return $numero;
+            return ['id_pago' => $idPago, 'numero_recibo' => $numero];
         } catch (Throwable $e) {
             $this->db->rollBack();
             throw $e;
@@ -287,15 +327,34 @@ class CobroModel
 
     public function resumenCaja(string $fecha, ?int $idApertura = null): array
     {
-        $sql = "SELECT COALESCE(SUM(CASE WHEN medio_pago='EFECTIVO' THEN importe_total ELSE 0 END),0) AS efectivo,COALESCE(SUM(CASE WHEN medio_pago<>'EFECTIVO' THEN importe_total ELSE 0 END),0) AS otros,COALESCE(SUM(importe_total),0) AS total,COUNT(*) AS operaciones FROM pagos_alumno WHERE estado='REGISTRADO' AND DATE(fecha_pago)=:fecha";
-        $params = [':fecha' => $fecha];
-        if ($idApertura) {
-            $sql .= ' AND id_apertura=:apertura';
-            $params[':apertura'] = $idApertura;
+        $tipos = ['EFECTIVO','YAPE','PLIN','TRANSFERENCIA','TARJETA','DEPOSITO','OTRO'];
+        $medios = array_fill_keys($tipos, 0.0);
+        $condicionPago = $idApertura ? 'p.id_apertura=:apertura' : 'DATE(p.fecha_pago)=:fecha';
+        $parametros = $idApertura ? [':apertura'=>$idApertura] : [':fecha'=>$fecha];
+        $pagos = $this->db->prepare("SELECT pm.medio,SUM(pm.importe_aplicado) total FROM pagos_alumno p INNER JOIN pagos_alumno_medios pm ON pm.id_pago=p.id_pago WHERE p.estado='REGISTRADO' AND {$condicionPago} GROUP BY pm.medio");
+        $pagos->execute($parametros);
+        foreach ($pagos->fetchAll() as $fila) $medios[$fila['medio']] += (float)$fila['total'];
+        $conteoPagos = $this->db->prepare("SELECT COUNT(DISTINCT p.id_pago) FROM pagos_alumno p WHERE p.estado='REGISTRADO' AND " . ($idApertura ? 'p.id_apertura=:apertura' : 'DATE(p.fecha_pago)=:fecha'));
+        $conteoPagos->execute($parametros);
+        $operaciones = (int)$conteoPagos->fetchColumn();
+
+        $condicionMovimiento = $idApertura ? 'id_apertura=:apertura' : 'DATE(fecha_movimiento)=:fecha';
+        $movimientos = $this->db->prepare("SELECT medio,SUM(CASE WHEN tipo='INGRESO' THEN monto ELSE -monto END) total,COUNT(*) operaciones FROM movimientos_financieros WHERE estado='REGISTRADO' AND {$condicionMovimiento} GROUP BY medio");
+        $movimientos->execute($parametros);
+        foreach ($movimientos->fetchAll() as $fila) {
+            $medios[$fila['medio']] += (float)$fila['total'];
+            $operaciones += (int)$fila['operaciones'];
         }
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute($params);
-        return $stmt->fetch() ?: [];
+        if ($idApertura) {
+            $apertura = $this->db->prepare('SELECT monto_apertura FROM aperturas_caja WHERE id_apertura=:id');
+            $apertura->execute([':id'=>$idApertura]);
+            $medios['EFECTIVO'] += (float)($apertura->fetchColumn() ?: 0);
+        }
+        foreach ($medios as &$importe) $importe = round($importe, 2);
+        unset($importe);
+        $efectivo = $medios['EFECTIVO'];
+        $otros = round(array_sum($medios) - $efectivo, 2);
+        return ['efectivo'=>$efectivo,'otros'=>$otros,'total'=>round($efectivo+$otros,2),'operaciones'=>$operaciones,'medios'=>$medios];
     }
 
     public function cierresCaja(): array
@@ -314,9 +373,15 @@ class CobroModel
         return $cierre->fetch() ? ['estado' => 'CERRADA', 'monto_apertura' => 0] : null;
     }
 
+    public function cajaAbierta(): ?array
+    {
+        $caja = $this->db->query("SELECT * FROM aperturas_caja WHERE estado='ABIERTA' ORDER BY id_apertura DESC LIMIT 1")->fetch();
+        return $caja ?: null;
+    }
+
     public function cajasDiarias(): array
     {
-        return $this->db->query("SELECT a.*,c.efectivo_sistema,c.efectivo_declarado,c.otros_sistema,c.otros_declarado,(c.efectivo_declarado+c.otros_declarado) AS total_cierre_declarado,c.diferencia,c.cerrado_en,COALESCE(r.efectivo,0) AS efectivo_cobrado,COALESCE(r.otros,0) AS otros_cobrados,COALESCE(r.total,0) AS total_cobrado,CONCAT(COALESCE(pa.apellidos,''),', ',COALESCE(pa.nombres,'')) AS usuario_apertura,ua.usuario AS login_apertura,CONCAT(COALESCE(pc.apellidos,''),', ',COALESCE(pc.nombres,'')) AS usuario_cierre,uc.usuario AS login_cierre FROM aperturas_caja a LEFT JOIN cierres_caja c ON c.id_apertura=a.id_apertura LEFT JOIN (SELECT id_apertura,SUM(CASE WHEN medio_pago='EFECTIVO' THEN importe_total ELSE 0 END) AS efectivo,SUM(CASE WHEN medio_pago<>'EFECTIVO' THEN importe_total ELSE 0 END) AS otros,SUM(importe_total) AS total FROM pagos_alumno WHERE estado='REGISTRADO' GROUP BY id_apertura) r ON r.id_apertura=a.id_apertura LEFT JOIN usuarios ua ON ua.id_usuario=a.abierto_por LEFT JOIN personas pa ON pa.id_persona=ua.id_persona LEFT JOIN usuarios uc ON uc.id_usuario=c.cerrado_por LEFT JOIN personas pc ON pc.id_persona=uc.id_persona ORDER BY a.abierto_en DESC")->fetchAll();
+        return $this->db->query("SELECT a.*,c.efectivo_sistema,c.efectivo_declarado,c.otros_sistema,c.otros_declarado,(c.efectivo_declarado+c.otros_declarado) AS total_cierre_declarado,c.diferencia,c.cerrado_en,COALESCE(r.efectivo,0) AS efectivo_cobrado,COALESCE(r.otros,0) AS otros_cobrados,COALESCE(r.total,0) AS total_cobrado,cm.medios_sistema,cm.medios_declarados,CONCAT(COALESCE(pa.apellidos,''),', ',COALESCE(pa.nombres,'')) AS usuario_apertura,ua.usuario AS login_apertura,CONCAT(COALESCE(pc.apellidos,''),', ',COALESCE(pc.nombres,'')) AS usuario_cierre,uc.usuario AS login_cierre FROM aperturas_caja a LEFT JOIN cierres_caja c ON c.id_apertura=a.id_apertura LEFT JOIN (SELECT id_apertura,SUM(CASE WHEN medio='EFECTIVO' THEN importe ELSE 0 END) efectivo,SUM(CASE WHEN medio<>'EFECTIVO' THEN importe ELSE 0 END) otros,SUM(importe) total FROM (SELECT p.id_apertura,pm.medio,pm.importe_aplicado importe FROM pagos_alumno p INNER JOIN pagos_alumno_medios pm ON pm.id_pago=p.id_pago WHERE p.estado='REGISTRADO' UNION ALL SELECT id_apertura,medio,CASE WHEN tipo='INGRESO' THEN monto ELSE -monto END FROM movimientos_financieros WHERE estado='REGISTRADO' AND id_apertura IS NOT NULL) flujo GROUP BY id_apertura) r ON r.id_apertura=a.id_apertura LEFT JOIN (SELECT id_cierre,GROUP_CONCAT(CONCAT(medio,': S/ ',FORMAT(importe_sistema,2)) ORDER BY FIELD(medio,'EFECTIVO','YAPE','PLIN','TRANSFERENCIA','TARJETA','DEPOSITO','OTRO') SEPARATOR ' | ') medios_sistema,GROUP_CONCAT(CONCAT(medio,': S/ ',FORMAT(importe_declarado,2)) ORDER BY FIELD(medio,'EFECTIVO','YAPE','PLIN','TRANSFERENCIA','TARJETA','DEPOSITO','OTRO') SEPARATOR ' | ') medios_declarados FROM cierres_caja_medios GROUP BY id_cierre) cm ON cm.id_cierre=c.id_cierre LEFT JOIN usuarios ua ON ua.id_usuario=a.abierto_por LEFT JOIN personas pa ON pa.id_persona=ua.id_persona LEFT JOIN usuarios uc ON uc.id_usuario=c.cerrado_por LEFT JOIN personas pc ON pc.id_persona=uc.id_persona ORDER BY a.abierto_en DESC")->fetchAll();
     }
 
     public function abrirCaja(array $data, int $usuario): void
@@ -324,6 +389,7 @@ class CobroModel
         $fecha = $data['fecha'] ?? '';
         $monto = round((float)($data['monto_apertura'] ?? 0), 2);
         if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $fecha) || $monto < 0) throw new RuntimeException('Complete la fecha y el monto de apertura.');
+        if ($fecha !== date('Y-m-d')) throw new RuntimeException('Solo puede abrir una caja con la fecha actual.');
         $this->db->beginTransaction();
         try {
             $abierta = $this->db->query("SELECT fecha FROM aperturas_caja WHERE estado='ABIERTA' LIMIT 1 FOR UPDATE")->fetchColumn();
@@ -341,9 +407,7 @@ class CobroModel
     {
         $fecha = $data['fecha'] ?? '';
         if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $fecha)) throw new RuntimeException('Seleccione una fecha válida.');
-        $efectivo = round((float)($data['efectivo_declarado'] ?? 0), 2);
-        $otros = round((float)($data['otros_declarado'] ?? 0), 2);
-        if ($efectivo < 0 || $otros < 0) throw new RuntimeException('Los importes declarados no pueden ser negativos.');
+        $declaradosEntrada = is_array($data['declarados'] ?? null) ? $data['declarados'] : [];
         $this->db->beginTransaction();
         try {
             $idApertura = (int)($data['id_apertura'] ?? 0);
@@ -356,10 +420,24 @@ class CobroModel
             if ($existe->fetch()) throw new RuntimeException('Este turno de caja ya fue cerrado.');
             $fecha = $apertura['fecha'];
             $resumen = $this->resumenCaja($fecha, $idApertura);
+            $declarados = [];
+            foreach ($resumen['medios'] as $medio=>$importeSistema) {
+                $declarado = round((float)($declaradosEntrada[$medio] ?? $importeSistema), 2);
+                if ($medio === 'EFECTIVO' && $declarado < 0) throw new RuntimeException('El efectivo declarado no puede ser negativo.');
+                $declarados[$medio] = $declarado;
+            }
+            $efectivo = $declarados['EFECTIVO'];
+            $otros = round(array_sum($declarados) - $efectivo, 2);
             $sistema = (float)$resumen['efectivo'] + (float)$resumen['otros'];
             $declarado = $efectivo + $otros;
-            $guardar = $this->db->prepare('INSERT INTO cierres_caja(fecha,id_apertura,efectivo_sistema,efectivo_declarado,otros_sistema,otros_declarado,diferencia,observacion,cerrado_por) VALUES(:fecha,:apertura,:efectivoSistema,:efectivoDeclarado,:otrosSistema,:otrosDeclarado,:diferencia,:observacion,:usuario)');
-            $guardar->execute([':fecha' => $fecha, ':apertura' => $idApertura, ':efectivoSistema' => $resumen['efectivo'], ':efectivoDeclarado' => $efectivo, ':otrosSistema' => $resumen['otros'], ':otrosDeclarado' => $otros, ':diferencia' => round($declarado - $sistema, 2), ':observacion' => trim($data['observacion'] ?? '') ?: null, ':usuario' => $usuario]);
+            $diferencia = round($declarado - $sistema, 2);
+            $guardar = $this->db->prepare('INSERT INTO cierres_caja(fecha,id_apertura,efectivo_sistema,efectivo_declarado,otros_sistema,otros_declarado,diferencia,estado_revision,observacion,cerrado_por) VALUES(:fecha,:apertura,:efectivoSistema,:efectivoDeclarado,:otrosSistema,:otrosDeclarado,:diferencia,:revision,:observacion,:usuario)');
+            $guardar->execute([':fecha' => $fecha, ':apertura' => $idApertura, ':efectivoSistema' => $resumen['efectivo'], ':efectivoDeclarado' => $efectivo, ':otrosSistema' => $resumen['otros'], ':otrosDeclarado' => $otros, ':diferencia' => $diferencia, ':revision'=>abs($diferencia)>0.009?'PENDIENTE':'SIN_DIFERENCIA', ':observacion' => trim($data['observacion'] ?? '') ?: null, ':usuario' => $usuario]);
+            $idCierre = (int)$this->db->lastInsertId();
+            $guardarMedio = $this->db->prepare('INSERT INTO cierres_caja_medios(id_cierre,medio,importe_sistema,importe_declarado,diferencia) VALUES(:cierre,:medio,:sistema,:declarado,:diferencia)');
+            foreach ($resumen['medios'] as $medio=>$importeSistema) {
+                $guardarMedio->execute([':cierre'=>$idCierre,':medio'=>$medio,':sistema'=>$importeSistema,':declarado'=>$declarados[$medio],':diferencia'=>round($declarados[$medio]-$importeSistema,2)]);
+            }
             $actualizar = $this->db->prepare("UPDATE aperturas_caja SET estado='CERRADA' WHERE id_apertura=:id");
             $actualizar->execute([':id' => $idApertura]);
             $this->db->commit();
@@ -371,7 +449,153 @@ class CobroModel
 
     public function pagos(): array
     {
-        return $this->db->query("SELECT p.*,CONCAT(COALESCE(a.apellidos,''),', ',COALESCE(a.nombres,'')) AS apoderado,COUNT(d.id_pago_detalle) AS deudas FROM pagos_alumno p LEFT JOIN personas a ON a.id_persona=p.id_apoderado LEFT JOIN pagos_alumno_detalles d ON d.id_pago=p.id_pago GROUP BY p.id_pago ORDER BY p.fecha_pago DESC,p.id_pago DESC")->fetchAll();
+        return $this->db->query("SELECT p.*,CONCAT(COALESCE(a.apellidos,''),', ',COALESCE(a.nombres,'')) AS apoderado,(SELECT COUNT(*) FROM pagos_alumno_detalles d WHERE d.id_pago=p.id_pago) AS deudas,(SELECT GROUP_CONCAT(CONCAT(pm.medio,' S/ ',FORMAT(pm.importe_aplicado,2)) ORDER BY pm.id_pago_medio SEPARATOR ' + ') FROM pagos_alumno_medios pm WHERE pm.id_pago=p.id_pago) AS medios_resumen,(SELECT COALESCE(SUM(pm.vuelto),0) FROM pagos_alumno_medios pm WHERE pm.id_pago=p.id_pago) AS vuelto,(SELECT COUNT(*) FROM pagos_alumno_medios pm WHERE pm.id_pago=p.id_pago AND pm.evidencia_archivo IS NOT NULL) AS evidencias FROM pagos_alumno p LEFT JOIN personas a ON a.id_persona=p.id_apoderado ORDER BY p.fecha_pago DESC,p.id_pago DESC")->fetchAll();
+    }
+
+    public function mediosCierres(): array
+    {
+        $filas = $this->db->query("SELECT cm.* FROM cierres_caja_medios cm INNER JOIN cierres_caja c ON c.id_cierre=cm.id_cierre ORDER BY cm.id_cierre,FIELD(cm.medio,'EFECTIVO','YAPE','PLIN','TRANSFERENCIA','TARJETA','DEPOSITO','OTRO')")->fetchAll();
+        $resultado = [];
+        foreach ($filas as $fila) $resultado[(int)$fila['id_cierre']][] = $fila;
+        return $resultado;
+    }
+
+    public function datosRevisionCierres(): array
+    {
+        $resultado=[];
+        foreach($this->db->query('SELECT id_cierre,id_apertura,estado_revision FROM cierres_caja')->fetchAll() as $fila){
+            $resultado[(int)$fila['id_apertura']]=['id_cierre'=>(int)$fila['id_cierre'],'estado_revision'=>$fila['estado_revision']];
+        }
+        return $resultado;
+    }
+
+    public function rectificacionesCaja(): array
+    {
+        return $this->db->query("SELECT r.*,c.fecha,c.id_apertura,COALESCE(NULLIF(CONCAT(COALESCE(p.apellidos,''),', ',COALESCE(p.nombres,'')),', '),u.usuario,'Sistema') responsable FROM rectificaciones_caja r INNER JOIN cierres_caja c ON c.id_cierre=r.id_cierre LEFT JOIN usuarios u ON u.id_usuario=r.registrado_por LEFT JOIN personas p ON p.id_persona=u.id_persona ORDER BY r.registrado_en DESC,r.id_rectificacion DESC")->fetchAll();
+    }
+
+    public function rectificarCaja(array $data, int $usuario): int
+    {
+        $idCierre = (int)($data['id_cierre'] ?? 0);
+        $accion = $data['accion'] ?? '';
+        $motivoTipo = $data['motivo_tipo'] ?? '';
+        $motivo = trim((string)($data['motivo'] ?? ''));
+        $referencia = trim((string)($data['referencia_regularizacion'] ?? ''));
+        $acciones = ['RECTIFICACION','JUSTIFICACION','REGULARIZACION'];
+        $motivos = ['ERROR_CONTEO','ERROR_DIGITACION','MOVIMIENTO_OMITIDO','DIFERENCIA_REAL','OTRO'];
+        if ($idCierre < 1 || !in_array($accion,$acciones,true) || !in_array($motivoTipo,$motivos,true) || strlen($motivo)<5) throw new InvalidArgumentException('Complete la acción y explique el motivo de la corrección.');
+        if ($accion === 'RECTIFICACION' && !in_array($motivoTipo,['ERROR_CONTEO','ERROR_DIGITACION','OTRO'],true)) throw new RuntimeException('Una rectificación debe corresponder a un error de conteo o digitación.');
+        if ($accion === 'REGULARIZACION' && $referencia === '') throw new RuntimeException('Indique la referencia del movimiento utilizado para regularizar la diferencia.');
+
+        $this->db->beginTransaction();
+        try {
+            $consulta = $this->db->prepare('SELECT * FROM cierres_caja WHERE id_cierre=:id FOR UPDATE');
+            $consulta->execute([':id'=>$idCierre]);
+            $cierre = $consulta->fetch();
+            if (!$cierre) throw new RuntimeException('El cierre seleccionado no existe.');
+            $consultaMedios = $this->db->prepare('SELECT * FROM cierres_caja_medios WHERE id_cierre=:id ORDER BY id_cierre_medio FOR UPDATE');
+            $consultaMedios->execute([':id'=>$idCierre]);
+            $medios = $consultaMedios->fetchAll();
+            if (!$medios) throw new RuntimeException('El cierre no tiene un detalle por medios disponible para rectificar.');
+            $nuevosEntrada = is_array($data['declarados'] ?? null) ? $data['declarados'] : [];
+            $detalles = []; $cambio = false; $totalSistema = 0.0; $totalNuevo = 0.0;
+            foreach ($medios as $medio) {
+                $anterior = (float)$medio['importe_declarado'];
+                $nuevo = $accion === 'RECTIFICACION' ? round((float)($nuevosEntrada[$medio['medio']] ?? $anterior),2) : $anterior;
+                if ($medio['medio']==='EFECTIVO' && $nuevo<0) throw new RuntimeException('El efectivo rectificado no puede ser negativo.');
+                if (abs($nuevo-$anterior)>0.009) $cambio=true;
+                $sistema=(float)$medio['importe_sistema'];
+                $detalles[]=['id'=>(int)$medio['id_cierre_medio'],'medio'=>$medio['medio'],'sistema'=>$sistema,'anterior'=>$anterior,'nuevo'=>$nuevo];
+                $totalSistema += $sistema; $totalNuevo += $nuevo;
+            }
+            if ($accion==='RECTIFICACION' && !$cambio) throw new RuntimeException('Modifique al menos un importe declarado para registrar la rectificación.');
+            if ($accion!=='RECTIFICACION' && abs((float)$cierre['diferencia'])<=0.009) throw new RuntimeException('Este cierre ya no tiene una diferencia pendiente que resolver.');
+            $diferenciaNueva=round($totalNuevo-$totalSistema,2);
+            $guardar=$this->db->prepare("INSERT INTO rectificaciones_caja(id_cierre,accion,motivo_tipo,motivo,referencia_regularizacion,evidencia_archivo,diferencia_anterior,diferencia_nueva,registrado_por) VALUES(:cierre,:accion,:tipo,:motivo,:referencia,:evidencia,:anterior,:nueva,:usuario)");
+            $guardar->execute([':cierre'=>$idCierre,':accion'=>$accion,':tipo'=>$motivoTipo,':motivo'=>$motivo,':referencia'=>$referencia?:null,':evidencia'=>trim((string)($data['evidencia_archivo']??''))?:null,':anterior'=>$cierre['diferencia'],':nueva'=>$diferenciaNueva,':usuario'=>$usuario]);
+            $idRectificacion=(int)$this->db->lastInsertId();
+            $guardarDetalle=$this->db->prepare('INSERT INTO rectificaciones_caja_medios(id_rectificacion,medio,importe_sistema,importe_anterior,importe_nuevo,diferencia_anterior,diferencia_nueva) VALUES(:rectificacion,:medio,:sistema,:anterior,:nuevo,:difAnterior,:difNueva)');
+            $actualizarMedio=$this->db->prepare('UPDATE cierres_caja_medios SET importe_declarado=:declarado,diferencia=:diferencia WHERE id_cierre_medio=:id');
+            foreach($detalles as $detalle){
+                $guardarDetalle->execute([':rectificacion'=>$idRectificacion,':medio'=>$detalle['medio'],':sistema'=>$detalle['sistema'],':anterior'=>$detalle['anterior'],':nuevo'=>$detalle['nuevo'],':difAnterior'=>round($detalle['anterior']-$detalle['sistema'],2),':difNueva'=>round($detalle['nuevo']-$detalle['sistema'],2)]);
+                if($accion==='RECTIFICACION')$actualizarMedio->execute([':declarado'=>$detalle['nuevo'],':diferencia'=>round($detalle['nuevo']-$detalle['sistema'],2),':id'=>$detalle['id']]);
+            }
+            $efectivoNuevo=0.0;
+            foreach($detalles as $detalle)if($detalle['medio']==='EFECTIVO')$efectivoNuevo=$detalle['nuevo'];
+            $estado=$accion==='RECTIFICACION'?'RECTIFICADO':($accion==='JUSTIFICACION'?'JUSTIFICADO':'REGULARIZADO');
+            $actualizar=$this->db->prepare('UPDATE cierres_caja SET efectivo_declarado=:efectivo,otros_declarado=:otros,diferencia=:diferencia,estado_revision=:estado WHERE id_cierre=:id');
+            $actualizar->execute([':efectivo'=>$efectivoNuevo,':otros'=>round($totalNuevo-$efectivoNuevo,2),':diferencia'=>$diferenciaNueva,':estado'=>$estado,':id'=>$idCierre]);
+            $this->db->commit();
+            return $idRectificacion;
+        } catch(Throwable $e){ if($this->db->inTransaction())$this->db->rollBack(); throw $e; }
+    }
+
+    public function evidenciaRectificacion(int $id): ?string
+    {
+        $stmt=$this->db->prepare('SELECT evidencia_archivo FROM rectificaciones_caja WHERE id_rectificacion=:id');
+        $stmt->execute([':id'=>$id]);
+        $archivo=$stmt->fetchColumn();
+        return $archivo?basename((string)$archivo):null;
+    }
+
+    public function reciboImprimible(int $idPago): array
+    {
+        if ($idPago < 1) throw new InvalidArgumentException('Seleccione un recibo valido.');
+
+        $pago = $this->db->prepare("SELECT pg.*,
+            CONCAT(COALESCE(ap.apellidos,''),', ',COALESCE(ap.nombres,'')) AS apoderado,
+            ap.numero_documento AS documento_apoderado,
+            COALESCE(NULLIF(CONCAT(COALESCE(pc.apellidos,''),', ',COALESCE(pc.nombres,'')),', '),uc.usuario,'Sistema') AS cajero,
+            COALESCE(NULLIF(CONCAT(COALESCE(pn.apellidos,''),', ',COALESCE(pn.nombres,'')),', '),un.usuario,NULL) AS anulador,
+            ac.abierto_en AS caja_abierta_en
+            FROM pagos_alumno pg
+            LEFT JOIN personas ap ON ap.id_persona=pg.id_apoderado
+            LEFT JOIN usuarios uc ON uc.id_usuario=pg.registrado_por
+            LEFT JOIN personas pc ON pc.id_persona=uc.id_persona
+            LEFT JOIN usuarios un ON un.id_usuario=pg.anulado_por
+            LEFT JOIN personas pn ON pn.id_persona=un.id_persona
+            LEFT JOIN aperturas_caja ac ON ac.id_apertura=pg.id_apertura
+            WHERE pg.id_pago=:id LIMIT 1");
+        $pago->execute([':id' => $idPago]);
+        $pago = $pago->fetch();
+        if (!$pago) throw new RuntimeException('El recibo no existe.');
+
+        $detalle = $this->db->prepare("SELECT d.id_pago_detalle,d.importe,
+            cc.periodo_cobro,cc.fecha_vencimiento,cc.saldo AS saldo_actual,cc.estado AS estado_cuenta,
+            c.nombre AS concepto,c.tipo AS tipo_concepto,
+            m.codigo_alumno,al.numero_documento AS documento_alumno,
+            CONCAT(al.apellidos,', ',al.nombres) AS alumno,
+            pa.nombre AS periodo_academico,
+            CONCAT(n.nombre,' · ',g.nombre,' ',s.nombre) AS seccion
+            FROM pagos_alumno_detalles d
+            INNER JOIN cuentas_cobrar cc ON cc.id_cuenta=d.id_cuenta
+            INNER JOIN conceptos_cobro c ON c.id_concepto_cobro=cc.id_concepto_cobro
+            INNER JOIN matriculas m ON m.id_matricula=cc.id_matricula
+            INNER JOIN personas al ON al.id_persona=m.id_persona
+            INNER JOIN periodos_academicos pa ON pa.id_periodo_academico=m.id_periodo_academico
+            INNER JOIN secciones s ON s.id_seccion=m.id_seccion
+            INNER JOIN grados g ON g.id_grado=s.id_grado
+            INNER JOIN niveles n ON n.id_nivel=g.id_nivel
+            WHERE d.id_pago=:id
+            ORDER BY al.apellidos,al.nombres,cc.periodo_cobro,c.nombre");
+        $detalle->execute([':id' => $idPago]);
+        $detalles = $detalle->fetchAll();
+        if (!$detalles) throw new RuntimeException('El recibo no tiene conceptos asociados.');
+
+        $consultaMedios = $this->db->prepare('SELECT id_pago_medio,medio,importe_aplicado,importe_recibido,vuelto,referencia,evidencia_archivo FROM pagos_alumno_medios WHERE id_pago=:id ORDER BY id_pago_medio');
+        $consultaMedios->execute([':id' => $idPago]);
+        $medios = $consultaMedios->fetchAll();
+
+        $institucion = $this->db->query('SELECT * FROM institucion ORDER BY id_institucion LIMIT 1')->fetch() ?: ['nombre' => 'Institucion educativa'];
+        return compact('pago', 'detalles', 'medios', 'institucion');
+    }
+
+    public function evidenciaPago(int $idPagoMedio): ?string
+    {
+        $stmt = $this->db->prepare('SELECT evidencia_archivo FROM pagos_alumno_medios WHERE id_pago_medio=:id');
+        $stmt->execute([':id' => $idPagoMedio]);
+        $archivo = $stmt->fetchColumn();
+        return $archivo ? basename((string)$archivo) : null;
     }
 
     public function anularPago(int $idPago, string $motivo, int $usuario): void

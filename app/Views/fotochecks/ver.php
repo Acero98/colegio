@@ -1,6 +1,7 @@
 <?php
-$nombreInstitucion = defined('INSTITUCION_NOMBRE') ? INSTITUCION_NOMBRE : 'Caleb School';
-$subtituloInstitucion = defined('INSTITUCION_SUBTITULO') ? INSTITUCION_SUBTITULO : SISTEMA_NOMBRE;
+$institucion = $institucion ?? institucionActual();
+$nombreInstitucion = $institucion['nombre_corto'] ?: $institucion['nombre'];
+$subtituloInstitucion = $institucion['lema'] ?: SISTEMA_NOMBRE;
 $periodoInstitucional = defined('INSTITUCION_PERIODO') ? INSTITUCION_PERIODO : date('Y');
 ?>
 <!doctype html>
@@ -121,6 +122,14 @@ $periodoInstitucional = defined('INSTITUCION_PERIODO') ? INSTITUCION_PERIODO : d
             border-radius: 50%;
             background: #ffffff1a;
             font-size: 12pt;
+        }
+
+        .sello img {
+            width: 100%;
+            height: 100%;
+            border-radius: inherit;
+            background: #fff;
+            object-fit: contain;
         }
 
         .institucion {
@@ -319,7 +328,7 @@ $periodoInstitucional = defined('INSTITUCION_PERIODO') ? INSTITUCION_PERIODO : d
 
         <section class="carnet" aria-label="Fotocheck de <?= htmlspecialchars($alumno['nombres'] . ' ' . $alumno['apellidos']) ?>">
             <header class="cabecera">
-                <span class="sello"><i class="bi bi-mortarboard-fill"></i></span>
+                <span class="sello"><?php if (!empty($institucion['logo'])): ?><img src="index.php?url=institucion_logo" alt="Logo"><?php else: ?><i class="bi bi-mortarboard-fill"></i><?php endif; ?></span>
                 <div class="institucion">
                     <strong><?= htmlspecialchars($nombreInstitucion) ?></strong>
                     <small><?= htmlspecialchars($subtituloInstitucion) ?></small>

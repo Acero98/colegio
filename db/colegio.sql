@@ -3,9 +3,13 @@ USE colegio;
 
 CREATE TABLE institucion (
   id_institucion TINYINT UNSIGNED PRIMARY KEY DEFAULT 1,
-  nombre VARCHAR(180) NOT NULL, ruc VARCHAR(20) NULL, direccion VARCHAR(250) NULL,
-  telefono VARCHAR(30) NULL, correo VARCHAR(150) NULL, logo VARCHAR(250) NULL,
-  creado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+  nombre VARCHAR(180) NOT NULL, nombre_corto VARCHAR(80) NULL, razon_social VARCHAR(180) NULL,
+  ruc VARCHAR(20) NULL, direccion VARCHAR(250) NULL, telefono VARCHAR(30) NULL,
+  correo VARCHAR(150) NULL, sitio_web VARCHAR(180) NULL, lema VARCHAR(180) NULL,
+  codigo_modular VARCHAR(30) NULL, ugel VARCHAR(120) NULL,
+  representante_nombre VARCHAR(180) NULL, representante_cargo VARCHAR(100) NULL,
+  logo VARCHAR(250) NULL, creado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  actualizado_por BIGINT UNSIGNED NULL, actualizado_en DATETIME NULL
 ) ENGINE=InnoDB;
 
 CREATE TABLE personas (
@@ -95,7 +99,8 @@ CREATE TABLE jornadas (
   id_jornada INT UNSIGNED AUTO_INCREMENT PRIMARY KEY, nombre VARCHAR(100) NOT NULL,
   aplica_a ENUM('ALUMNO','DOCENTE','ADMINISTRATIVO') NOT NULL,
   hora_entrada TIME NOT NULL, hora_salida TIME NOT NULL, tolerancia_minutos SMALLINT UNSIGNED NOT NULL DEFAULT 0,
-  requiere_salida BOOLEAN NOT NULL DEFAULT TRUE, estado ENUM('ACTIVO','INACTIVO') NOT NULL DEFAULT 'ACTIVO'
+  requiere_salida BOOLEAN NOT NULL DEFAULT TRUE, es_predeterminada BOOLEAN NOT NULL DEFAULT FALSE,
+  estado ENUM('ACTIVO','INACTIVO') NOT NULL DEFAULT 'ACTIVO'
 ) ENGINE=InnoDB;
 CREATE TABLE asignaciones_horario (
   id_asignacion BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, id_persona BIGINT UNSIGNED NOT NULL,
@@ -150,7 +155,7 @@ CREATE TABLE incidencias_asistencia (
   id_incidencia BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, id_asistencia BIGINT UNSIGNED NOT NULL,
   tipo ENUM('JUSTIFICACION_FALTA','JUSTIFICACION_TARDANZA','PERMISO','LICENCIA','OBSERVACION') NOT NULL,
   motivo VARCHAR(500) NOT NULL, estado ENUM('PENDIENTE','APROBADA','RECHAZADA') NOT NULL DEFAULT 'PENDIENTE',
-  registrado_por BIGINT UNSIGNED NULL, resuelto_por BIGINT UNSIGNED NULL, creado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, resuelto_en DATETIME NULL,
+  registrado_por BIGINT UNSIGNED NULL, resuelto_por BIGINT UNSIGNED NULL, resolucion_observacion VARCHAR(500) NULL, creado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, resuelto_en DATETIME NULL,
   CONSTRAINT fk_incidencia_asistencia FOREIGN KEY(id_asistencia) REFERENCES asistencias_diarias(id_asistencia)
 ) ENGINE=InnoDB;
 
@@ -175,10 +180,18 @@ CREATE TABLE cuentas_cobrar (
 ) ENGINE=InnoDB;
 CREATE TABLE pagos_alumno (
   id_pago BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, numero_recibo VARCHAR(30) NOT NULL,
-  id_apoderado BIGINT UNSIGNED NULL, fecha_pago DATETIME NOT NULL, medio_pago ENUM('EFECTIVO','TRANSFERENCIA','YAPE','PLIN','OTRO') NOT NULL,
+  id_apoderado BIGINT UNSIGNED NULL, id_apertura BIGINT UNSIGNED NULL, fecha_pago DATETIME NOT NULL, medio_pago ENUM('EFECTIVO','TRANSFERENCIA','YAPE','PLIN','TARJETA','DEPOSITO','OTRO','MIXTO') NOT NULL,
   importe_total DECIMAL(12,2) NOT NULL, estado ENUM('REGISTRADO','ANULADO') NOT NULL DEFAULT 'REGISTRADO',
   registrado_por BIGINT UNSIGNED NULL, observacion VARCHAR(250) NULL, motivo_anulacion VARCHAR(250) NULL, anulado_por BIGINT UNSIGNED NULL, anulado_en DATETIME NULL, UNIQUE KEY uq_recibo(numero_recibo),
   CONSTRAINT fk_pago_apoderado FOREIGN KEY(id_apoderado) REFERENCES personas(id_persona)
+) ENGINE=InnoDB;
+CREATE TABLE pagos_alumno_medios (
+  id_pago_medio BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, id_pago BIGINT UNSIGNED NOT NULL,
+  medio ENUM('EFECTIVO','TRANSFERENCIA','YAPE','PLIN','TARJETA','DEPOSITO','OTRO') NOT NULL,
+  importe_aplicado DECIMAL(12,2) NOT NULL, importe_recibido DECIMAL(12,2) NOT NULL,
+  vuelto DECIMAL(12,2) NOT NULL DEFAULT 0, referencia VARCHAR(120) NULL, evidencia_archivo VARCHAR(180) NULL,
+  KEY ix_pago_medio_pago(id_pago), KEY ix_pago_medio_tipo(medio),
+  CONSTRAINT fk_pago_medio_pago FOREIGN KEY(id_pago) REFERENCES pagos_alumno(id_pago)
 ) ENGINE=InnoDB;
 CREATE TABLE pagos_alumno_detalles (
   id_pago_detalle BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, id_pago BIGINT UNSIGNED NOT NULL, id_cuenta BIGINT UNSIGNED NOT NULL, importe DECIMAL(12,2) NOT NULL,
@@ -195,6 +208,7 @@ CREATE TABLE cierres_caja (
   id_cierre BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, fecha DATE NOT NULL, efectivo_sistema DECIMAL(12,2) NOT NULL DEFAULT 0,
   efectivo_declarado DECIMAL(12,2) NOT NULL DEFAULT 0, otros_sistema DECIMAL(12,2) NOT NULL DEFAULT 0,
   otros_declarado DECIMAL(12,2) NOT NULL DEFAULT 0, diferencia DECIMAL(12,2) NOT NULL DEFAULT 0,
+  estado_revision ENUM('SIN_DIFERENCIA','PENDIENTE','RECTIFICADO','JUSTIFICADO','REGULARIZADO') NOT NULL DEFAULT 'SIN_DIFERENCIA',
   observacion VARCHAR(250) NULL, cerrado_por BIGINT UNSIGNED NULL, cerrado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, id_apertura BIGINT UNSIGNED NULL,
   UNIQUE KEY uq_cierre_apertura(id_apertura)
 ) ENGINE=InnoDB;
@@ -203,10 +217,52 @@ CREATE TABLE aperturas_caja (
   observacion VARCHAR(250) NULL, abierto_por BIGINT UNSIGNED NULL, abierto_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   estado ENUM('ABIERTA','CERRADA') NOT NULL DEFAULT 'ABIERTA', KEY ix_apertura_caja_fecha(fecha,estado)
 ) ENGINE=InnoDB;
+CREATE TABLE categorias_movimiento_financiero (
+  id_categoria INT UNSIGNED AUTO_INCREMENT PRIMARY KEY, nombre VARCHAR(120) NOT NULL,
+  tipo ENUM('INGRESO','EGRESO') NOT NULL, clasificacion ENUM('OPERATIVO','FINANCIAMIENTO','CAPITAL') NOT NULL DEFAULT 'OPERATIVO',
+  estado ENUM('ACTIVO','INACTIVO') NOT NULL DEFAULT 'ACTIVO', UNIQUE KEY uq_categoria_movimiento(nombre,tipo)
+) ENGINE=InnoDB;
+CREATE TABLE movimientos_financieros (
+  id_movimiento BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, codigo VARCHAR(30) NOT NULL,
+  tipo ENUM('INGRESO','EGRESO') NOT NULL, id_categoria INT UNSIGNED NOT NULL, fecha_movimiento DATETIME NOT NULL,
+  monto DECIMAL(12,2) NOT NULL, medio ENUM('EFECTIVO','TRANSFERENCIA','YAPE','PLIN','TARJETA','DEPOSITO','OTRO') NOT NULL,
+  tercero VARCHAR(160) NULL, documento VARCHAR(80) NULL, referencia VARCHAR(120) NULL, descripcion VARCHAR(500) NOT NULL,
+  evidencia_archivo VARCHAR(180) NULL, id_apertura BIGINT UNSIGNED NULL, estado ENUM('REGISTRADO','ANULADO') NOT NULL DEFAULT 'REGISTRADO',
+  registrado_por BIGINT UNSIGNED NULL, registrado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  anulado_por BIGINT UNSIGNED NULL, anulado_en DATETIME NULL, motivo_anulacion VARCHAR(250) NULL,
+  UNIQUE KEY uq_movimiento_codigo(codigo), KEY ix_movimiento_fecha(fecha_movimiento,estado), KEY ix_movimiento_tipo(tipo,id_categoria),
+  CONSTRAINT fk_movimiento_categoria FOREIGN KEY(id_categoria) REFERENCES categorias_movimiento_financiero(id_categoria),
+  CONSTRAINT fk_movimiento_apertura FOREIGN KEY(id_apertura) REFERENCES aperturas_caja(id_apertura)
+) ENGINE=InnoDB;
+CREATE TABLE cierres_caja_medios (
+  id_cierre_medio BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, id_cierre BIGINT UNSIGNED NOT NULL,
+  medio ENUM('EFECTIVO','TRANSFERENCIA','YAPE','PLIN','TARJETA','DEPOSITO','OTRO') NOT NULL,
+  importe_sistema DECIMAL(12,2) NOT NULL DEFAULT 0, importe_declarado DECIMAL(12,2) NOT NULL DEFAULT 0,
+  diferencia DECIMAL(12,2) NOT NULL DEFAULT 0, UNIQUE KEY uq_cierre_caja_medio(id_cierre,medio),
+  CONSTRAINT fk_cierre_medio_cierre FOREIGN KEY(id_cierre) REFERENCES cierres_caja(id_cierre)
+) ENGINE=InnoDB;
+CREATE TABLE rectificaciones_caja (
+  id_rectificacion BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, id_cierre BIGINT UNSIGNED NOT NULL,
+  accion ENUM('RECTIFICACION','JUSTIFICACION','REGULARIZACION') NOT NULL,
+  motivo_tipo ENUM('ERROR_CONTEO','ERROR_DIGITACION','MOVIMIENTO_OMITIDO','DIFERENCIA_REAL','OTRO') NOT NULL,
+  motivo VARCHAR(500) NOT NULL, referencia_regularizacion VARCHAR(120) NULL, evidencia_archivo VARCHAR(180) NULL,
+  diferencia_anterior DECIMAL(12,2) NOT NULL, diferencia_nueva DECIMAL(12,2) NOT NULL,
+  registrado_por BIGINT UNSIGNED NULL, registrado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  KEY ix_rectificacion_cierre(id_cierre,registrado_en),
+  CONSTRAINT fk_rectificacion_cierre FOREIGN KEY(id_cierre) REFERENCES cierres_caja(id_cierre)
+) ENGINE=InnoDB;
+CREATE TABLE rectificaciones_caja_medios (
+  id_rectificacion_medio BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, id_rectificacion BIGINT UNSIGNED NOT NULL,
+  medio ENUM('EFECTIVO','TRANSFERENCIA','YAPE','PLIN','TARJETA','DEPOSITO','OTRO') NOT NULL,
+  importe_sistema DECIMAL(12,2) NOT NULL, importe_anterior DECIMAL(12,2) NOT NULL, importe_nuevo DECIMAL(12,2) NOT NULL,
+  diferencia_anterior DECIMAL(12,2) NOT NULL, diferencia_nueva DECIMAL(12,2) NOT NULL,
+  UNIQUE KEY uq_rectificacion_medio(id_rectificacion,medio),
+  CONSTRAINT fk_rectificacion_medio FOREIGN KEY(id_rectificacion) REFERENCES rectificaciones_caja(id_rectificacion)
+) ENGINE=InnoDB;
 
 CREATE TABLE periodos_pago (
   id_periodo_pago INT UNSIGNED AUTO_INCREMENT PRIMARY KEY, nombre VARCHAR(50) NOT NULL, fecha_inicio DATE NOT NULL, fecha_fin DATE NOT NULL,
-  estado ENUM('ABIERTO','CALCULADO','REVISADO','CERRADO','PAGADO') NOT NULL DEFAULT 'ABIERTO', UNIQUE KEY uq_periodo_pago(nombre)
+  estado ENUM('ABIERTO','CALCULADO','REVISADO','CERRADO','PAGADO','FINALIZADO') NOT NULL DEFAULT 'ABIERTO', UNIQUE KEY uq_periodo_pago(nombre)
 ) ENGINE=InnoDB;
 CREATE TABLE conceptos_pago (
   id_concepto_pago INT UNSIGNED AUTO_INCREMENT PRIMARY KEY, nombre VARCHAR(120) NOT NULL,
@@ -221,7 +277,10 @@ CREATE TABLE reglas_descuento (
 CREATE TABLE planilla_detalles (
   id_planilla_detalle BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, id_periodo_pago INT UNSIGNED NOT NULL, id_vinculo BIGINT UNSIGNED NOT NULL,
   monto_base DECIMAL(12,2) NOT NULL, bonificaciones DECIMAL(12,2) NOT NULL DEFAULT 0, descuentos DECIMAL(12,2) NOT NULL DEFAULT 0,
-  monto_pagar DECIMAL(12,2) NOT NULL, estado ENUM('CALCULADO','REVISADO','CERRADO','PAGADO') NOT NULL DEFAULT 'CALCULADO',
+  monto_pagar DECIMAL(12,2) NOT NULL, monto_pagado DECIMAL(12,2) NOT NULL DEFAULT 0, saldo_pendiente DECIMAL(12,2) NOT NULL DEFAULT 0,
+  decision_pago ENUM('PENDIENTE','RETENIDO','EXCLUIDO') NOT NULL DEFAULT 'PENDIENTE', monto_excluido DECIMAL(12,2) NOT NULL DEFAULT 0,
+  decision_motivo VARCHAR(500) NULL, decision_por BIGINT UNSIGNED NULL, decision_en DATETIME NULL,
+  estado ENUM('CALCULADO','REVISADO','CERRADO','PARCIAL','PAGADO') NOT NULL DEFAULT 'CALCULADO',
   calculado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, UNIQUE KEY uq_planilla_trabajador(id_periodo_pago,id_vinculo),
   CONSTRAINT fk_planilla_periodo FOREIGN KEY(id_periodo_pago) REFERENCES periodos_pago(id_periodo_pago),
   CONSTRAINT fk_planilla_vinculo FOREIGN KEY(id_vinculo) REFERENCES vinculos_laborales(id_vinculo)
@@ -252,11 +311,21 @@ CREATE TABLE auditoria (
   CONSTRAINT fk_auditoria_usuario FOREIGN KEY(id_usuario) REFERENCES usuarios(id_usuario)
 ) ENGINE=InnoDB;
 
+CREATE TABLE cierres_asistencia (
+  id_cierre BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, fecha DATE NOT NULL,
+  alcance ENUM('ALUMNOS','PERSONAL') NOT NULL, tipo ENUM('MANUAL','AUTOMATICO') NOT NULL DEFAULT 'MANUAL',
+  ejecutado_por BIGINT UNSIGNED NULL, proceso VARCHAR(80) NULL,
+  faltas_generadas INT UNSIGNED NOT NULL DEFAULT 0, incompletas_generadas INT UNSIGNED NOT NULL DEFAULT 0,
+  detalle JSON NULL, ejecutado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_cierre_asistencia_fecha_alcance(fecha,alcance), KEY ix_cierre_asistencia_ejecucion(ejecutado_en),
+  CONSTRAINT fk_cierre_asistencia_usuario FOREIGN KEY(ejecutado_por) REFERENCES usuarios(id_usuario)
+) ENGINE=InnoDB;
+
 INSERT INTO roles(nombre) VALUES ('Super Administrador'),('Administrador'),('Director'),('Responsable de asistencia'),('Responsable de cobros'),('Responsable de planilla'),('Docente'),('Apoderado'),('Consulta');
 INSERT INTO permisos(clave,descripcion) VALUES
 ('personas.ver','Consultar personas'),('personas.crear','Registrar personas'),('alumnos.ver','Consultar alumnos'),('apoderados.ver','Consultar apoderados'),('academico.ver','Consultar estructura académica'),('academico.gestionar','Gestionar estructura académica'),('matriculas.ver','Consultar matrículas'),('matriculas.crear','Registrar matrículas'),('fotochecks.ver','Consultar fotochecks'),('fotochecks.generar','Generar o renovar QR'),('asistencia.ver','Consultar asistencia'),('asistencia.escanear','Registrar asistencia QR'),('asistencia.configurar','Configurar jornadas y dispositivos'),
 ('horarios.ver','Consultar horarios'),('horarios.gestionar','Asignar jornadas y sesiones'),
 ('incidencias.ver','Consultar incidencias'),('incidencias.gestionar','Registrar y resolver incidencias'),
-('asistencia.modificar','Modificar asistencia calculada'),('cobros.gestionar','Gestionar cobros'),('planilla.calcular','Calcular planilla'),('planilla.cerrar','Cerrar periodos de planilla'),('reportes.ver','Consultar reportes'),('auditoria.ver','Consultar auditoría'),('configuracion.gestionar','Gestionar configuración');
+('asistencia.modificar','Modificar asistencia calculada'),('cobros.gestionar','Gestionar cobros'),('caja.rectificar','Rectificar y resolver diferencias de caja'),('planilla.calcular','Calcular planilla'),('planilla.cerrar','Cerrar periodos de planilla'),('reportes.ver','Consultar reportes'),('auditoria.ver','Consultar auditoría'),('configuracion.gestionar','Gestionar configuración');
 INSERT INTO rol_permiso(id_rol,id_permiso) SELECT 1,id_permiso FROM permisos;
-INSERT INTO institucion(id_institucion,nombre) VALUES(1,'Institución educativa') ON DUPLICATE KEY UPDATE nombre=nombre;
+INSERT INTO institucion(id_institucion,nombre,nombre_corto,razon_social) VALUES(1,'Institución educativa','Colegio','Institución educativa') ON DUPLICATE KEY UPDATE nombre=nombre;

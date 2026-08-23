@@ -8,6 +8,7 @@
         <table id="tabla-fotochecks" data-datatable data-page-options="5,10,25,50" class="min-w-full text-left text-sm">
             <thead class="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
                 <tr>
+                    <th class="no-sort px-5 py-4">N°</th>
                     <th class="px-5 py-4">Persona</th>
                     <th class="px-5 py-4">Perfil</th>
                     <th class="px-5 py-4">Código / documento</th>
@@ -16,7 +17,8 @@
                     <th class="no-sort px-5 py-4 text-right">Acciones</th>
                 </tr>
             </thead>
-            <tbody class="divide-y divide-slate-100"><?php foreach ($personas as $persona): ?><tr>
+            <tbody class="divide-y divide-slate-100"><?php foreach ($personas as $indice => $persona): ?><tr>
+                        <td class="px-5 py-4 text-slate-500"><?= $indice + 1 ?></td>
                         <td class="px-5 py-4"><strong class="block"><?= htmlspecialchars($persona['apellidos'] . ', ' . $persona['nombres']) ?></strong><span class="text-xs text-slate-500"><?= htmlspecialchars($persona['numero_documento']) ?></span></td>
                         <td class="px-5 py-4"><span class="rounded-full bg-blue-50 px-2 py-1 text-xs font-semibold text-blue-700"><?= htmlspecialchars($persona['tipo_fotocheck']) ?></span></td>
                         <td class="px-5 py-4 font-mono text-xs"><?= htmlspecialchars($persona['codigo_alumno']) ?></td>
@@ -26,7 +28,7 @@
                             <div class="inline-flex gap-2"><?php if ($persona['id_qr']): ?><a href="index.php?url=fotocheck_ver&id=<?= $persona['id_persona'] ?>" target="_blank" class="rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700"><i class="bi bi-eye"></i> Ver</a><?php endif; ?><?php if (tienePermiso('fotochecks.generar')): ?><form method="post" action="index.php?url=fotocheck_generar" data-confirmar-accion="fotocheck-generar"><?= campoCsrf() ?><input type="hidden" name="id_persona" value="<?= $persona['id_persona'] ?>"><button class="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"><i class="bi bi-qr-code"></i> <?= $persona['id_qr'] ? 'Renovar' : 'Generar' ?></button></form><?php endif; ?></div>
                         </td>
                     </tr><?php endforeach; ?><?php if (!$personas): ?><tr>
-                        <td colspan="6" class="px-5 py-12 text-center text-slate-500">No hay alumnos o personal habilitado para generar fotocheck.</td>
+                        <td colspan="7" class="px-5 py-12 text-center text-slate-500">No hay alumnos o personal habilitado para generar fotocheck.</td>
                     </tr><?php endif; ?></tbody>
         </table>
     </div>

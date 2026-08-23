@@ -4,7 +4,8 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#2563eb">
-    <title><?= htmlspecialchars(SISTEMA_NOMBRE) ?></title>
+    <?php $institucionGlobal = institucionActual(); ?>
+    <title><?= htmlspecialchars(($institucionGlobal['nombre_corto'] ?: $institucionGlobal['nombre']) . ' · ' . SISTEMA_NOMBRE) ?></title>
     <?php $versionAssets = (string) @filemtime(__DIR__ . '/../../../public/assets/css/app.css'); ?>
     <link rel="stylesheet" href="<?= BASE_URL ?>assets/css/inter.css">
     <link rel="stylesheet" href="<?= BASE_URL ?>assets/css/bootstrap-icons.min.css">

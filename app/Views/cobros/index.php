@@ -29,7 +29,8 @@ $alumnoEstado = $estadoCuenta[0] ?? null;
             </div>
             <div class="flex gap-4"><a target="_blank" href="index.php?url=cobros_estado_cuenta&alumno=<?= $alumnoEstado['id_persona'] ?>" class="text-sm font-semibold text-blue-700">Imprimir estado</a><a href="index.php?url=cobros&mes=<?= urlencode($mes ?: 'todos') ?>" class="text-sm font-semibold text-blue-700">Cerrar</a></div>
         </div>
-        <form method="post" action="index.php?url=cobros_pagar" data-confirmar-accion="cobrar" class="mt-4 grid gap-3"><?= campoCsrf() ?><input type="hidden" name="mes" value="<?= htmlspecialchars($mes) ?>">
+        <?php if (!$cajaDisponibleHoy): ?><div class="mt-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-900"><p class="font-semibold"><i class="bi bi-lock mr-1"></i> Los pagos están bloqueados</p><p class="mt-1"><?= $cajaAbierta ? 'La caja del ' . htmlspecialchars($cajaAbierta['fecha']) . ' continúa abierta. Ciérrela y abra la caja de hoy.' : 'Primero debe abrir un turno de caja para hoy.' ?></p><a href="index.php?url=cobros_cierre_caja<?= $cajaAbierta ? '&fecha=' . urlencode($cajaAbierta['fecha']) : '' ?>" class="mt-3 inline-flex rounded-lg bg-red-600 px-4 py-2 font-semibold text-white"><?= $cajaAbierta ? 'Cerrar caja pendiente' : 'Abrir caja' ?></a></div><?php else: ?>
+        <form id="form-pago-mixto" method="post" enctype="multipart/form-data" action="index.php?url=cobros_pagar" data-confirmar-accion="cobrar" class="mt-4 grid gap-4"><?= campoCsrf() ?><input type="hidden" name="mes" value="<?= htmlspecialchars($mes) ?>">
             <div class="overflow-x-auto">
                 <table class="min-w-full text-sm">
                     <thead>
@@ -46,18 +47,26 @@ $alumnoEstado = $estadoCuenta[0] ?? null;
                                 <td class="p-2"><?= htmlspecialchars($c['concepto']) ?></td>
                                 <td class="p-2"><?= htmlspecialchars($c['fecha_vencimiento'] ?: '—') ?></td>
                                 <td class="p-2 font-semibold">S/ <?= number_format((float)$c['saldo'], 2) ?></td>
-                                <td class="p-2"><input type="number" min="0" max="<?= $c['saldo'] ?>" step="0.01" name="detalles[<?= $c['id_cuenta'] ?>]" class="form-input w-28" placeholder="0.00"></td>
+                                <td class="p-2"><input type="number" min="0" max="<?= $c['saldo'] ?>" step="0.01" name="detalles[<?= $c['id_cuenta'] ?>]" class="form-input pago-deuda w-28" placeholder="0.00"></td>
                             </tr><?php endforeach; ?></tbody>
                 </table>
             </div>
-            <div class="grid gap-3 sm:grid-cols-3"><select name="medio_pago" class="form-input">
-                    <option>EFECTIVO</option>
-                    <option>TRANSFERENCIA</option>
-                    <option>YAPE</option>
-                    <option>PLIN</option>
-                    <option>OTRO</option>
-                </select><input name="observacion" maxlength="250" class="form-input" placeholder="Observación opcional"><button class="rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white">Registrar pago seleccionado</button></div>
-        </form>
+            <div class="rounded-2xl border border-emerald-200 bg-white p-4">
+                <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div><h3 class="font-bold text-slate-800">Distribución del pago</h3><p class="text-xs text-slate-500">Agregue únicamente los medios utilizados por el apoderado.</p></div>
+                    <div class="flex flex-wrap gap-2"><button id="completar-efectivo" type="button" class="rounded-lg bg-emerald-100 px-3 py-2 text-xs font-semibold text-emerald-800"><i class="bi bi-cash mr-1"></i> Completar con efectivo</button><button id="agregar-medio" type="button" class="rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white"><i class="bi bi-plus-lg mr-1"></i> Agregar medio</button></div>
+                </div>
+                <div id="medios-vacio" class="mt-4 rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-5 text-center text-sm text-slate-500">Todavía no agregó ningún medio de pago.</div>
+                <div id="lista-medios" class="mt-4 grid gap-3"></div>
+                <div class="mt-4 grid gap-2 rounded-xl bg-slate-900 p-4 text-white sm:grid-cols-4">
+                    <div><span class="block text-xs text-slate-300">Deudas seleccionadas</span><strong id="pago-total-deudas" class="text-lg">S/ 0.00</strong></div>
+                    <div><span class="block text-xs text-slate-300">Medios distribuidos</span><strong id="pago-total-medios" class="text-lg">S/ 0.00</strong></div>
+                    <div><span class="block text-xs text-slate-300">Falta distribuir</span><strong id="pago-falta" class="text-lg">S/ 0.00</strong></div>
+                    <div><span class="block text-xs text-slate-300">Vuelto</span><strong id="pago-vuelto" class="text-lg text-emerald-300">S/ 0.00</strong></div>
+                </div>
+            </div>
+            <div class="grid gap-3 sm:grid-cols-[1fr_auto]"><input name="observacion" maxlength="250" class="form-input" placeholder="Observación opcional"><button id="registrar-pago" class="rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"><i class="bi bi-receipt"></i> Registrar y generar recibo</button></div>
+        </form><?php endif; ?>
     </section><?php endif; ?>
 <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
     <div class="overflow-x-auto">
@@ -194,3 +203,127 @@ $alumnoEstado = $estadoCuenta[0] ?? null;
             document.getElementById('modal-tarifa').classList.remove('hidden');
         });
     </script><?php endif; ?>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.getElementById('form-pago-mixto');
+        if (!form) return;
+        const deudas = [...form.querySelectorAll('.pago-deuda')];
+        const listaMedios = document.getElementById('lista-medios');
+        const avisoVacio = document.getElementById('medios-vacio');
+        const tiposMedio = {
+            EFECTIVO: 'Efectivo', YAPE: 'Yape', PLIN: 'Plin', TRANSFERENCIA: 'Transferencia',
+            TARJETA: 'Tarjeta', DEPOSITO: 'Depósito', OTRO: 'Otro'
+        };
+        const dinero = valor => 'S/ ' + valor.toFixed(2);
+        const sumar = campos => campos.reduce((total, campo) => total + (parseFloat(campo.value) || 0), 0);
+
+        function filasMedio() {
+            return [...listaMedios.querySelectorAll('[data-fila-medio]')];
+        }
+        function tiposUsados(ignorarFila) {
+            return filasMedio().filter(fila => fila !== ignorarFila).map(fila => fila.querySelector('.medio-tipo').value);
+        }
+        function actualizarOpciones() {
+            filasMedio().forEach(fila => {
+                const usados = tiposUsados(fila);
+                [...fila.querySelector('.medio-tipo').options].forEach(opcion => opcion.disabled = usados.includes(opcion.value));
+            });
+            avisoVacio.classList.toggle('hidden', filasMedio().length > 0);
+            document.getElementById('agregar-medio').disabled = filasMedio().length >= Object.keys(tiposMedio).length;
+        }
+        function mostrarCampoComplementario(fila) {
+            const tipo = fila.querySelector('.medio-tipo').value;
+            const importe = fila.querySelector('.medio-importe');
+            importe.name = `medios[${tipo}][importe]`;
+            importe.dataset.medioImporte = tipo;
+            const contenedor = fila.querySelector('.medio-complemento');
+            contenedor.className = tipo === 'EFECTIVO' ? 'medio-complemento' : 'medio-complemento grid gap-2 md:grid-cols-2';
+            contenedor.innerHTML = tipo === 'EFECTIVO'
+                ? '<label class="text-xs text-slate-500">Recibido S/<input type="number" min="0" step="0.01" value="0" name="medios[EFECTIVO][recibido]" class="form-input efectivo-recibido mt-1"></label>'
+                : `<label class="text-xs text-slate-500">Referencia <span class="text-slate-400">(o evidencia)</span><input maxlength="120" name="medios[${tipo}][referencia]" class="form-input medio-referencia mt-1" placeholder="N.° operación / detalle"></label><label class="text-xs text-slate-500">Evidencia <span class="text-slate-400">(o referencia)</span><input type="file" name="evidencias[${tipo}]" accept="image/jpeg,image/png,image/webp" class="mt-2 block w-full text-xs text-slate-600 file:mr-2 file:rounded-lg file:border-0 file:bg-blue-100 file:px-3 file:py-2 file:font-semibold file:text-blue-700"></label>`;
+            const campoCalculo = contenedor.querySelector('input[type="number"]');
+            if (campoCalculo) campoCalculo.addEventListener('input', actualizarPago);
+        }
+        function agregarMedio(tipoPreferido) {
+            const usados = tiposUsados(null);
+            const disponibles = Object.keys(tiposMedio).filter(tipo => !usados.includes(tipo));
+            if (!disponibles.length) return null;
+            const tipoInicial = disponibles.includes(tipoPreferido) ? tipoPreferido : disponibles[0];
+            const fila = document.createElement('div');
+            fila.dataset.filaMedio = '';
+            fila.className = 'grid gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 sm:grid-cols-[minmax(150px,0.8fr)_minmax(130px,0.7fr)_minmax(180px,1fr)_auto] sm:items-end';
+            fila.innerHTML = `<label class="text-xs text-slate-500">Medio<select class="form-input medio-tipo mt-1">${Object.entries(tiposMedio).map(([valor, etiqueta]) => `<option value="${valor}"${valor === tipoInicial ? ' selected' : ''}>${etiqueta}</option>`).join('')}</select></label><label class="text-xs text-slate-500">Aplicar S/<input type="number" min="0" step="0.01" value="0" class="form-input medio-importe mt-1"></label><div class="medio-complemento"></div><button type="button" class="quitar-medio inline-flex h-10 items-center justify-center rounded-lg bg-red-100 px-3 text-sm font-semibold text-red-700" title="Quitar medio"><i class="bi bi-trash"></i><span class="ml-2 sm:hidden">Quitar</span></button>`;
+            listaMedios.appendChild(fila);
+            mostrarCampoComplementario(fila);
+            fila.querySelector('.medio-importe').addEventListener('input', actualizarPago);
+            const selector = fila.querySelector('.medio-tipo');
+            selector.dataset.anterior = tipoInicial;
+            selector.addEventListener('change', function() {
+                if (tiposUsados(fila).includes(selector.value)) {
+                    selector.value = selector.dataset.anterior;
+                    if (window.Swal) Swal.fire({icon:'info',title:'Medio ya agregado',text:'Edite la fila existente para ese medio.',confirmButtonColor:'#2563eb'});
+                    return;
+                }
+                selector.dataset.anterior = selector.value;
+                mostrarCampoComplementario(fila);
+                actualizarOpciones();
+                actualizarPago();
+            });
+            fila.querySelector('.quitar-medio').addEventListener('click', function() {
+                fila.remove();
+                actualizarOpciones();
+                actualizarPago();
+            });
+            actualizarOpciones();
+            actualizarPago();
+            return fila;
+        }
+        function actualizarPago() {
+            const medios = [...form.querySelectorAll('.medio-importe')];
+            const efectivoAplicado = form.querySelector('[data-medio-importe="EFECTIVO"]');
+            const efectivoRecibido = form.querySelector('.efectivo-recibido');
+            const totalDeudas = Math.round(sumar(deudas) * 100) / 100;
+            const totalMedios = Math.round(sumar(medios) * 100) / 100;
+            const falta = Math.round((totalDeudas - totalMedios) * 100) / 100;
+            const vuelto = efectivoAplicado && efectivoRecibido ? Math.max(0, Math.round(((parseFloat(efectivoRecibido.value) || 0) - (parseFloat(efectivoAplicado.value) || 0)) * 100) / 100) : 0;
+            document.getElementById('pago-total-deudas').textContent = dinero(totalDeudas);
+            document.getElementById('pago-total-medios').textContent = dinero(totalMedios);
+            document.getElementById('pago-falta').textContent = falta < 0 ? 'Excede ' + dinero(Math.abs(falta)) : dinero(falta);
+            document.getElementById('pago-falta').classList.toggle('text-red-300', Math.abs(falta) > 0.009);
+            document.getElementById('pago-vuelto').textContent = dinero(vuelto);
+            return {totalDeudas, totalMedios, falta};
+        }
+        deudas.forEach(campo => campo.addEventListener('input', actualizarPago));
+        document.getElementById('agregar-medio').addEventListener('click', function() { agregarMedio(); });
+        document.getElementById('completar-efectivo').addEventListener('click', function() {
+            let filaEfectivo = filasMedio().find(fila => fila.querySelector('.medio-tipo').value === 'EFECTIVO');
+            if (!filaEfectivo) filaEfectivo = agregarMedio('EFECTIVO');
+            const efectivoAplicado = filaEfectivo.querySelector('.medio-importe');
+            const efectivoRecibido = filaEfectivo.querySelector('.efectivo-recibido');
+            const medios = [...form.querySelectorAll('.medio-importe')];
+            const totalDeudas = Math.round(sumar(deudas) * 100) / 100;
+            const otros = Math.round(medios.filter(campo => campo !== efectivoAplicado).reduce((total, campo) => total + (parseFloat(campo.value) || 0), 0) * 100) / 100;
+            efectivoAplicado.value = Math.max(0, Math.round((totalDeudas - otros) * 100) / 100).toFixed(2);
+            if ((parseFloat(efectivoRecibido.value) || 0) < parseFloat(efectivoAplicado.value)) efectivoRecibido.value = efectivoAplicado.value;
+            actualizarPago();
+        });
+        form.addEventListener('submit', function(event) {
+            const resumen = actualizarPago();
+            const efectivoAplicado = form.querySelector('[data-medio-importe="EFECTIVO"]');
+            const efectivoRecibido = form.querySelector('.efectivo-recibido');
+            let mensaje = '';
+            if (resumen.totalDeudas <= 0) mensaje = 'Indique cuánto se aplicará a una o más deudas.';
+            else if (resumen.totalMedios <= 0) mensaje = 'Distribuya el importe en al menos un medio de pago.';
+            else if (Math.abs(resumen.falta) > 0.009) mensaje = 'La suma de los medios debe coincidir con el total aplicado a las deudas.';
+            else if (efectivoAplicado && efectivoRecibido && (parseFloat(efectivoAplicado.value) || 0) > (parseFloat(efectivoRecibido.value) || 0)) mensaje = 'El efectivo recibido no puede ser menor que el efectivo aplicado.';
+            if (mensaje) {
+                event.preventDefault();
+                event.stopImmediatePropagation();
+                if (window.Swal) Swal.fire({icon:'warning',title:'Revise el pago',text:mensaje,confirmButtonColor:'#059669'});
+                else alert(mensaje);
+            }
+        });
+        actualizarOpciones();
+        actualizarPago();
+    });
+</script>
