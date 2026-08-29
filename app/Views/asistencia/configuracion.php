@@ -1,4 +1,4 @@
-<div class="mb-6"><p class="text-sm font-medium text-blue-600">Asistencia</p><h1 class="text-2xl font-bold">Jornadas y dispositivos</h1><p class="mt-1 text-sm text-slate-500">Configure los horarios institucionales y autorice los equipos que pueden registrar marcaciones.</p></div>
+<div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"><div><p class="text-sm font-medium text-blue-600">Asistencia</p><h1 class="text-2xl font-bold">Jornadas y dispositivos</h1><p class="mt-1 text-sm text-slate-500">Configure los horarios institucionales y autorice los equipos que pueden registrar marcaciones.</p></div><a href="index.php?url=horarios" class="inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50"><i class="bi bi-arrow-left mr-2"></i>Volver a Horarios</a></div>
 
 <section class="grid gap-5 lg:grid-cols-2">
     <article class="rounded-2xl border border-blue-100 bg-white p-5 shadow-sm">

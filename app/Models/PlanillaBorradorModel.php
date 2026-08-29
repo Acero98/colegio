@@ -30,7 +30,15 @@ class PlanillaBorradorModel
             $estado = $q->fetchColumn();
             if (!in_array($estado, ['ABIERTO', 'CALCULADO'], true)) throw new RuntimeException('Solo se puede generar o recalcular un período abierto o calculado.');
 
+            $operaciones = $this->db->prepare('SELECT COUNT(*) FROM pagos_planilla pg INNER JOIN planilla_detalles pd ON pd.id_planilla_detalle=pg.id_planilla_detalle WHERE pd.id_periodo_pago=?');
+            $operaciones->execute([$idPeriodo]);
+            if ((int)$operaciones->fetchColumn()>0) throw new RuntimeException('No se puede recalcular porque el periodo ya tiene operaciones de pago.');
+            $ajustesExistentes = $this->db->prepare('SELECT COUNT(*) FROM planilla_ajustes a INNER JOIN planilla_detalles pd ON pd.id_planilla_detalle=a.id_planilla_detalle WHERE pd.id_periodo_pago=?');
+            $ajustesExistentes->execute([$idPeriodo]);
+            if ((int)$ajustesExistentes->fetchColumn()>0) throw new RuntimeException('No se puede recalcular mientras existan ajustes manuales registrados en el periodo.');
+
             $this->db->prepare('DELETE pc FROM planilla_detalle_conceptos pc INNER JOIN planilla_detalles pd ON pd.id_planilla_detalle=pc.id_planilla_detalle WHERE pd.id_periodo_pago=?')->execute([$idPeriodo]);
+            $this->db->prepare('DELETE FROM planilla_detalles WHERE id_periodo_pago=?')->execute([$idPeriodo]);
             $guardar = $this->db->prepare("INSERT INTO planilla_detalles(id_periodo_pago,id_vinculo,monto_base,bonificaciones,descuentos,monto_pagar,estado)
                 VALUES(?,?,?,?,?,?,'CALCULADO')
                 ON DUPLICATE KEY UPDATE monto_base=VALUES(monto_base),bonificaciones=VALUES(bonificaciones),descuentos=VALUES(descuentos),monto_pagar=VALUES(monto_pagar),monto_pagado=0,saldo_pendiente=VALUES(monto_pagar),decision_pago='PENDIENTE',monto_excluido=0,decision_motivo=NULL,decision_por=NULL,decision_en=NULL,estado='CALCULADO',calculado_en=NOW()");
@@ -44,14 +52,11 @@ class PlanillaBorradorModel
                 $buscar->execute([$idPeriodo, $fila['v']['id_vinculo']]);
                 $detalle = (int) $buscar->fetchColumn();
 
-                if ($fila['mensual'] > 0) {
-                    $agregar->execute([$detalle, $this->concepto('Remuneración mensual', 'INGRESO', 'BASE'), null, $fila['diasVigentes'], $fila['mensual'], json_encode(['dias' => $fila['diasVigentes'], 'feriados' => $fila['feriados']])]);
-                }
-                if ($fila['pagoHora'] > 0) {
-                    $agregar->execute([$detalle, $this->concepto('Pago por horas', 'INGRESO', 'HORA'), null, $fila['horas'], $fila['pagoHora'], json_encode(['horas' => $fila['horas']])]);
-                }
-                if ($fila['pagoSesion'] > 0) {
-                    $agregar->execute([$detalle, $this->concepto('Pago por sesiones', 'INGRESO', 'HORA'), null, $fila['a']['sesiones'], $fila['pagoSesion'], json_encode(['sesiones' => $fila['a']['sesiones'], 'esperadas' => $fila['sesionesEsperadas']])]);
+                foreach ($fila['tramos'] as $tramo) {
+                    $explicacion = ['tramo'=>true,'id_vinculo'=>$tramo['id_vinculo'],'desde'=>$tramo['desde'],'hasta'=>$tramo['hasta'],'modalidad'=>$tramo['modalidad'],'dias_laborables'=>$tramo['dias_laborables']];
+                    if ($tramo['mensual'] > 0) $agregar->execute([$detalle,$this->concepto('Remuneración mensual','INGRESO','BASE'),null,$tramo['dias_vigentes'],$tramo['mensual'],json_encode($explicacion+['dias'=>$tramo['dias_vigentes']])]);
+                    if ($tramo['pago_hora'] > 0) $agregar->execute([$detalle,$this->concepto('Pago por horas','INGRESO','HORA'),null,$tramo['horas'],$tramo['pago_hora'],json_encode($explicacion+['horas'=>$tramo['horas']])]);
+                    if ($tramo['pago_sesion'] > 0) $agregar->execute([$detalle,$this->concepto('Pago por sesiones','INGRESO','HORA'),null,$tramo['sesiones'],$tramo['pago_sesion'],json_encode($explicacion+['sesiones'=>$tramo['sesiones']])]);
                 }
 
                 foreach ($fila['reglasAplicadas'] as $regla) {
@@ -86,6 +91,8 @@ class PlanillaBorradorModel
         foreach ($detalles as &$detalle) {
             $conceptos->execute([$detalle['id_planilla_detalle']]);
             $detalle['conceptos'] = $conceptos->fetchAll();
+            foreach ($detalle['conceptos'] as &$concepto) $concepto['explicacion_datos'] = $concepto['explicacion'] ? (json_decode($concepto['explicacion'],true) ?: []) : [];
+            unset($concepto);
         }
         unset($detalle);
         return compact('periodo', 'detalles');

@@ -20,7 +20,7 @@ $coloresRevision=['SIN_DIFERENCIA'=>'bg-emerald-100 text-emerald-800','PENDIENTE
 <?php if ($abierta): ?><section class="mb-5 overflow-hidden rounded-2xl border border-blue-200 bg-white shadow-sm"><div class="border-b border-blue-100 bg-blue-50 px-5 py-4"><h2 class="font-bold text-blue-900">Detalle por medio del turno</h2><p class="text-sm text-blue-700">Incluye cobros y otros movimientos vinculados a esta caja.</p></div><div class="grid gap-3 p-5 sm:grid-cols-2 lg:grid-cols-4"><?php foreach ($resumenCaja['medios'] as $medio=>$importe): ?><div class="rounded-xl border border-slate-200 p-4"><span class="text-xs font-semibold text-slate-500"><?= htmlspecialchars($medio) ?></span><b class="mt-1 block text-lg <?= $importe < 0 ? 'text-rose-700' : 'text-slate-800' ?>">S/ <?= number_format((float)$importe,2) ?></b></div><?php endforeach; ?></div></section><?php endif; ?>
 <?php if ($puedeAbrir): ?><section class="mb-5 rounded-2xl border border-emerald-200 bg-emerald-50 p-5">
         <h2 class="font-bold text-emerald-900">Abrir nuevo turno</h2>
-        <form method="post" action="index.php?url=cobros_apertura_guardar" data-confirmar-accion="apertura-caja" class="mt-4 grid gap-4 sm:grid-cols-2"><?= campoCsrf() ?><input type="hidden" name="fecha" value="<?= htmlspecialchars($fecha) ?>"><label class="form-label">Monto inicial<input required min="0" step="0.01" name="monto_apertura" value="0.00" class="form-input"></label><label class="form-label">Observación<input maxlength="250" name="observacion" class="form-input" placeholder="Ej.: turno tarde"></label><button class="rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white sm:col-span-2">Abrir turno</button></form>
+        <form method="post" action="index.php?url=cobros_apertura_guardar" data-confirmar-accion="apertura-caja" class="mt-4 grid gap-4 sm:grid-cols-2"><?= campoCsrf() ?><input type="hidden" name="fecha" value="<?= htmlspecialchars($fecha) ?>"><label class="form-label">Monto inicial<input required min="0" step="0.01" name="monto_apertura" value="0.00" class="form-input"></label><label class="form-label">Observación<input maxlength="250" name="observacion" class="form-input" placeholder="Ej.: turno tarde"></label><button class="rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white sm:col-span-2">Abrir Caja - Turno</button></form>
     </section><?php elseif ($abierta && $gestionaCaja): ?><section class="mb-5 rounded-2xl border border-violet-200 bg-violet-50 p-5">
         <h2 class="font-bold text-violet-900">Cerrar turno actual</h2>
         <p class="mt-1 text-sm text-violet-700">Confirme cada medio comparándolo con el efectivo contado, las aplicaciones digitales, el banco o el POS.</p><form method="post" action="index.php?url=cobros_cierre_guardar" data-confirmar-accion="cierre-caja" class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3"><?= campoCsrf() ?><input type="hidden" name="fecha" value="<?= htmlspecialchars($fecha) ?>"><input type="hidden" name="id_apertura" value="<?= $estadoCaja['id_apertura'] ?>"><?php foreach ($resumenCaja['medios'] as $medio=>$importe): ?><label class="form-label"><?= htmlspecialchars(ucfirst(strtolower($medio))) ?> declarado<input required <?= $medio==='EFECTIVO'?'min="0"':'' ?> step="0.01" type="number" name="declarados[<?= htmlspecialchars($medio) ?>]" value="<?= number_format((float)$importe, 2, '.', '') ?>" class="form-input"><small class="mt-1 block font-normal text-slate-500">Sistema: S/ <?= number_format((float)$importe,2) ?></small></label><?php endforeach; ?><label class="form-label sm:col-span-2 lg:col-span-3">Observación<input maxlength="250" name="observacion" class="form-input"></label><button class="rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white sm:col-span-2 lg:col-span-3">Cerrar y conciliar turno</button></form>
@@ -30,9 +30,10 @@ $coloresRevision=['SIN_DIFERENCIA'=>'bg-emerald-100 text-emerald-800','PENDIENTE
         <h2 class="font-bold">Historial de turnos</h2>
     </div>
     <div class="overflow-x-auto">
-        <table id="tablaCajas" class="min-w-full text-left text-sm">
+        <table id="tablaCajas" data-datatable data-page-options="5,10,25,50" data-order="1:desc" class="min-w-full text-left text-sm">
             <thead class="bg-slate-50 text-xs uppercase text-slate-500">
                 <tr>
+                    <th class="no-sort p-4">N°</th>
                     <th class="p-4">Fecha</th>
                     <th class="p-4">Monto inicial</th>
                     <th class="p-4">Estado</th>
@@ -43,8 +44,9 @@ $coloresRevision=['SIN_DIFERENCIA'=>'bg-emerald-100 text-emerald-800','PENDIENTE
                     <th class="no-sort p-4">Acciones</th>
                 </tr>
             </thead>
-            <tbody class="divide-y divide-slate-100"><?php foreach ($cajas as $caja): $nombreApertura = trim($caja['usuario_apertura'], ', ') ?: ($caja['login_apertura'] ?: 'Usuario');
+            <tbody class="divide-y divide-slate-100"><?php foreach ($cajas as $indice => $caja): $nombreApertura = trim($caja['usuario_apertura'], ', ') ?: ($caja['login_apertura'] ?: 'Usuario');
                                                             $nombreCierre = trim($caja['usuario_cierre'], ', ') ?: ($caja['login_cierre'] ?: 'Usuario'); ?><tr>
+                        <td class="p-4 text-slate-500"><?= $indice + 1 ?></td>
                         <td class="p-4 font-medium"><?= htmlspecialchars($caja['fecha']) ?></td>
                         <td class="p-4">S/ <?= number_format((float)$caja['monto_apertura'], 2) ?><span class="block text-xs text-slate-500"><?= htmlspecialchars($caja['abierto_en']) ?></span></td>
                         <td class="p-4"><span class="rounded-full px-2 py-1 text-xs font-semibold <?= $caja['estado'] === 'ABIERTA' ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-700' ?>"><?= $caja['estado'] ?></span></td>
@@ -54,7 +56,7 @@ $coloresRevision=['SIN_DIFERENCIA'=>'bg-emerald-100 text-emerald-800','PENDIENTE
                         <td class="p-4 text-xs"><?= htmlspecialchars($caja['observacion'] ?: '—') ?></td>
                         <td class="p-4"><?php if($caja['estado']==='CERRADA'&&!empty($caja['id_cierre'])&&tienePermiso('caja.rectificar')): ?><button type="button" onclick="abrirRevisionCaja(<?= (int)$caja['id_cierre'] ?>,'<?= htmlspecialchars($caja['fecha'],ENT_QUOTES) ?>')" class="inline-flex h-9 items-center gap-2 rounded-lg bg-violet-100 px-3 text-xs font-semibold text-violet-800" title="Rectificar o resolver diferencia"><i class="bi bi-clipboard-check"></i> Revisar</button><?php else: ?>—<?php endif; ?></td>
                     </tr><?php endforeach; ?><?php if (!$cajas): ?><tr>
-                        <td colspan="8" class="p-6 text-center text-slate-500">Aún no hay turnos registrados.</td>
+                        <td colspan="9" class="p-6 text-center text-slate-500">Aún no hay turnos registrados.</td>
                     </tr><?php endif; ?></tbody>
         </table>
     </div>
@@ -67,20 +69,3 @@ function abrirRevisionCaja(id,fecha){document.getElementById('revision-id-cierre
 function actualizarTipoRevision(){const accion=document.getElementById('revision-accion').value,rectificar=accion==='RECTIFICACION',regularizar=accion==='REGULARIZACION';document.querySelectorAll('.revision-importe').forEach(i=>i.readOnly=!rectificar);document.getElementById('revision-referencia-contenedor').classList.toggle('hidden',!regularizar);document.getElementById('revision-referencia').required=regularizar;const motivo=document.getElementById('revision-motivo-tipo');if(rectificar&&!['ERROR_CONTEO','ERROR_DIGITACION','OTRO'].includes(motivo.value))motivo.value='ERROR_CONTEO'}
 document.addEventListener('DOMContentLoaded',()=>document.getElementById('revision-accion')?.addEventListener('change',actualizarTipoRevision));
 </script><?php endif; ?>
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        if (window.simpleDatatables && document.querySelector('#tablaCajas')) new simpleDatatables.DataTable('#tablaCajas', {
-            perPage: 10,
-            perPageSelect: [5, 10, 25, 50],
-            searchable: true,
-            sortable: true,
-            labels: {
-                placeholder: 'Buscar...',
-                perPage: 'Mostrar',
-                noRows: 'No hay registros',
-                noResults: 'No se encontraron resultados',
-                info: 'Mostrando {start} a {end} de {rows} registros'
-            }
-        })
-    });
-</script>

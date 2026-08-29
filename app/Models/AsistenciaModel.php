@@ -186,6 +186,9 @@ class AsistenciaModel
         }
         $carga = $this->obtenerCargaVigente((int) $persona['id_persona'], $fechaDispositivo);
         $jornada = $this->obtenerJornada((int) $persona['id_persona'], $fecha);
+        if ($alcanceCierre === 'PERSONAL' && !$carga && $jornada && !$this->esDiaLaborablePersonal((int)$persona['id_persona'], $fecha)) {
+            throw new DomainException('Hoy no corresponde a uno de los dias laborables asignados a esta persona. Registre primero un cambio de horario si realizara trabajo extraordinario.');
+        }
         if (!$carga && !$jornada) {
             throw new InvalidArgumentException('La persona no tiene una jornada o sesión asignada para esta marcación.');
         }
@@ -239,6 +242,14 @@ class AsistenciaModel
         $stmt = $this->db->prepare("SELECT j.* FROM jornadas j INNER JOIN persona_perfiles pp ON pp.tipo='ALUMNO' AND pp.id_persona=:persona AND pp.estado='ACTIVO' WHERE j.estado='ACTIVO' AND j.aplica_a='ALUMNO' ORDER BY j.es_predeterminada DESC,j.id_jornada LIMIT 1");
         $stmt->execute([':persona' => $idPersona]);
         return $stmt->fetch() ?: null;
+    }
+
+    private function esDiaLaborablePersonal(int $idPersona, string $fecha): bool
+    {
+        $dia = (int)(new DateTimeImmutable($fecha))->format('N');
+        $stmt = $this->db->prepare("SELECT COUNT(*) FROM vinculos_laborales WHERE id_persona=? AND estado='ACTIVO' AND fecha_inicio<=? AND (fecha_fin IS NULL OR fecha_fin>=?) AND FIND_IN_SET(?,dias_laborables)>0");
+        $stmt->execute([$idPersona,$fecha,$fecha,(string)$dia]);
+        return (int)$stmt->fetchColumn() > 0;
     }
 
     private function obtenerCargaVigente(int $idPersona, DateTimeImmutable $fechaHora): ?array
@@ -333,7 +344,7 @@ class AsistenciaModel
     private function cerrarDia(string $fecha): array
     {
         if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $fecha)) throw new InvalidArgumentException('La fecha no es válida.');
-        if ((int) date('N', strtotime($fecha)) >= 6) throw new DomainException('No se puede cerrar asistencia en fin de semana.');
+        if ((int) date('N', strtotime($fecha)) >= 6) throw new DomainException('No se puede cerrar asistencia de alumnos en fin de semana.');
         $calendario = $this->db->prepare("SELECT 1 FROM calendario_institucional WHERE fecha=? AND estado='ACTIVO' LIMIT 1");
         $calendario->execute([$fecha]);
         if ($calendario->fetchColumn()) throw new DomainException('La fecha está marcada como no laborable en el calendario institucional.');
@@ -350,22 +361,33 @@ class AsistenciaModel
     private function cerrarPersonalDia(string $fecha): array
     {
         if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $fecha)) throw new InvalidArgumentException('La fecha no es válida.');
-        if ((int) date('N', strtotime($fecha)) >= 6) throw new DomainException('No se puede cerrar asistencia en fin de semana.');
         $calendario = $this->db->prepare("SELECT 1 FROM calendario_institucional WHERE fecha=? AND estado='ACTIVO' LIMIT 1");
         $calendario->execute([$fecha]);
         if ($calendario->fetchColumn()) throw new DomainException('La fecha está marcada como no laborable en el calendario institucional.');
+        $diaSemana = (int)date('N', strtotime($fecha));
+        if (!$this->hayPersonalProgramado($fecha, $diaSemana)) throw new DomainException('No existe personal con jornada o sesion programada para esta fecha.');
         $transaccionPropia = !$this->db->inTransaction();
         if ($transaccionPropia) $this->db->beginTransaction();
         try {
-            $faltasJornada = $this->db->prepare("INSERT INTO asistencias_diarias(id_persona,fecha,id_jornada,id_vinculo,estado,observacion,calculado_en) SELECT ah.id_persona,:fecha,j.id_jornada,v.id_vinculo,'FALTA','Generada por cierre de jornada',NOW() FROM asignaciones_horario ah INNER JOIN jornadas j ON j.id_jornada=ah.id_jornada INNER JOIN vinculos_laborales v ON v.id_persona=ah.id_persona AND v.estado='ACTIVO' LEFT JOIN asistencias_diarias a ON a.id_persona=ah.id_persona AND a.fecha=:fecha2 AND a.id_jornada=j.id_jornada WHERE ah.estado='ACTIVO' AND j.estado='ACTIVO' AND ah.fecha_inicio<=:fecha3 AND (ah.fecha_fin IS NULL OR ah.fecha_fin>=:fecha4) AND v.fecha_inicio<=:fecha5 AND (v.fecha_fin IS NULL OR v.fecha_fin>=:fecha6) AND a.id_asistencia IS NULL");
-            $faltasJornada->execute([':fecha'=>$fecha, ':fecha2'=>$fecha, ':fecha3'=>$fecha, ':fecha4'=>$fecha, ':fecha5'=>$fecha, ':fecha6'=>$fecha]);
+            $faltasJornada = $this->db->prepare("INSERT INTO asistencias_diarias(id_persona,fecha,id_jornada,id_vinculo,estado,observacion,calculado_en) SELECT ah.id_persona,:fecha,j.id_jornada,v.id_vinculo,'FALTA','Generada por cierre de jornada',NOW() FROM asignaciones_horario ah INNER JOIN jornadas j ON j.id_jornada=ah.id_jornada INNER JOIN vinculos_laborales v ON v.id_persona=ah.id_persona AND v.estado='ACTIVO' LEFT JOIN asistencias_diarias a ON a.id_persona=ah.id_persona AND a.fecha=:fecha2 AND a.id_jornada=j.id_jornada WHERE ah.estado='ACTIVO' AND j.estado='ACTIVO' AND ah.fecha_inicio<=:fecha3 AND (ah.fecha_fin IS NULL OR ah.fecha_fin>=:fecha4) AND v.fecha_inicio<=:fecha5 AND (v.fecha_fin IS NULL OR v.fecha_fin>=:fecha6) AND FIND_IN_SET(:dia,v.dias_laborables)>0 AND a.id_asistencia IS NULL");
+            $faltasJornada->execute([':fecha'=>$fecha, ':fecha2'=>$fecha, ':fecha3'=>$fecha, ':fecha4'=>$fecha, ':fecha5'=>$fecha, ':fecha6'=>$fecha, ':dia'=>(string)$diaSemana]);
             $faltasSesion = $this->db->prepare("INSERT INTO asistencias_diarias(id_persona,fecha,id_carga,id_vinculo,estado,observacion,calculado_en) SELECT v.id_persona,:fecha,c.id_carga,c.id_vinculo,'FALTA','Generada por cierre de sesión',NOW() FROM carga_academica c INNER JOIN vinculos_laborales v ON v.id_vinculo=c.id_vinculo INNER JOIN periodos_academicos pa ON pa.id_periodo_academico=c.id_periodo_academico LEFT JOIN asistencias_diarias a ON a.id_carga=c.id_carga AND a.fecha=:fecha2 WHERE c.estado='ACTIVO' AND v.estado='ACTIVO' AND pa.estado='ACTIVO' AND :fecha3 BETWEEN pa.fecha_inicio AND pa.fecha_fin AND c.dia_semana=:dia AND a.id_asistencia IS NULL");
-            $faltasSesion->execute([':fecha'=>$fecha, ':fecha2'=>$fecha, ':fecha3'=>$fecha, ':dia'=>(int) date('N', strtotime($fecha))]);
-            $incompletas = $this->db->prepare("UPDATE asistencias_diarias a INNER JOIN vinculos_laborales v ON v.id_persona=a.id_persona SET a.estado='INCOMPLETO',a.observacion='Entrada registrada sin salida al cierre de personal',a.calculado_en=NOW() WHERE a.fecha=? AND a.id_matricula IS NULL AND (a.id_jornada IS NOT NULL OR a.id_carga IS NOT NULL) AND a.hora_entrada IS NOT NULL AND a.hora_salida IS NULL AND a.estado IN('PUNTUAL','TARDANZA') AND v.estado='ACTIVO'");
-            $incompletas->execute([$fecha]);
+            $faltasSesion->execute([':fecha'=>$fecha, ':fecha2'=>$fecha, ':fecha3'=>$fecha, ':dia'=>$diaSemana]);
+            $incompletas = $this->db->prepare("UPDATE asistencias_diarias a INNER JOIN vinculos_laborales v ON v.id_persona=a.id_persona SET a.estado='INCOMPLETO',a.observacion='Entrada registrada sin salida al cierre de personal',a.calculado_en=NOW() WHERE a.fecha=? AND a.id_matricula IS NULL AND (a.id_carga IS NOT NULL OR (a.id_jornada IS NOT NULL AND FIND_IN_SET(?,v.dias_laborables)>0)) AND a.hora_entrada IS NOT NULL AND a.hora_salida IS NULL AND a.estado IN('PUNTUAL','TARDANZA') AND v.estado='ACTIVO'");
+            $incompletas->execute([$fecha,(string)$diaSemana]);
             if ($transaccionPropia) $this->db->commit();
             return ['faltas_jornada'=>$faltasJornada->rowCount(), 'faltas_sesion'=>$faltasSesion->rowCount(), 'incompletas'=>$incompletas->rowCount()];
         } catch (Throwable $e) { if ($transaccionPropia && $this->db->inTransaction()) $this->db->rollBack(); throw $e; }
+    }
+
+    private function hayPersonalProgramado(string $fecha, int $diaSemana): bool
+    {
+        $jornadas = $this->db->prepare("SELECT COUNT(*) FROM asignaciones_horario ah INNER JOIN jornadas j ON j.id_jornada=ah.id_jornada AND j.estado='ACTIVO' INNER JOIN vinculos_laborales v ON v.id_persona=ah.id_persona AND v.estado='ACTIVO' WHERE ah.estado='ACTIVO' AND ah.fecha_inicio<=? AND (ah.fecha_fin IS NULL OR ah.fecha_fin>=?) AND v.fecha_inicio<=? AND (v.fecha_fin IS NULL OR v.fecha_fin>=?) AND FIND_IN_SET(?,v.dias_laborables)>0");
+        $jornadas->execute([$fecha,$fecha,$fecha,$fecha,(string)$diaSemana]);
+        if ((int)$jornadas->fetchColumn() > 0) return true;
+        $sesiones = $this->db->prepare("SELECT COUNT(*) FROM carga_academica c INNER JOIN vinculos_laborales v ON v.id_vinculo=c.id_vinculo AND v.estado='ACTIVO' INNER JOIN periodos_academicos pa ON pa.id_periodo_academico=c.id_periodo_academico AND pa.estado='ACTIVO' WHERE c.estado='ACTIVO' AND c.dia_semana=? AND ? BETWEEN pa.fecha_inicio AND pa.fecha_fin AND v.fecha_inicio<=? AND (v.fecha_fin IS NULL OR v.fecha_fin>=?)");
+        $sesiones->execute([$diaSemana,$fecha,$fecha,$fecha]);
+        return (int)$sesiones->fetchColumn() > 0;
     }
 
     public function cerrarAlumnosRegistrado(string $fecha, ?int $usuario, string $tipo = 'MANUAL', ?string $proceso = null): array

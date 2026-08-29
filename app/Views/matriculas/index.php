@@ -1,3 +1,26 @@
+<link rel="stylesheet" href="<?= BASE_URL ?>assets/css/tom-select.css?v=<?= @filemtime(__DIR__ . '/../../../public/assets/css/tom-select.css') ?>">
+<style>
+    #modal-matricula .ts-wrapper { width: 100%; margin-top: .25rem; }
+    #modal-matricula .ts-control {
+        min-height: 2.75rem;
+        padding: .625rem .75rem;
+        border: 1px solid #cbd5e1;
+        border-radius: .75rem;
+        box-shadow: none;
+    }
+    #modal-matricula .ts-wrapper.focus .ts-control {
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, .15);
+    }
+    #modal-matricula .ts-dropdown {
+        z-index: 90;
+        overflow: hidden;
+        border: 1px solid #cbd5e1;
+        border-radius: .75rem;
+    }
+    #modal-matricula .ts-dropdown-content { max-height: 15rem; }
+</style>
+
 <div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
     <div>
         <p class="text-sm font-medium text-blue-600">Gestión académica</p>
@@ -42,9 +65,9 @@
                 <p class="text-sm text-slate-500">El código se genera automáticamente si se deja vacío. El cupo se valida al guardar.</p>
             </div><button type="button" onclick="document.getElementById('modal-matricula').classList.add('hidden')" class="rounded-lg p-2 hover:bg-slate-100"><i class="bi bi-x-lg"></i></button>
         </div>
-        <form method="post" action="index.php?url=matriculas_guardar" class="mt-5 grid gap-4 sm:grid-cols-2"><?= campoCsrf() ?><label class="form-label sm:col-span-2">Alumno<select required name="id_alumno" class="form-input">
+        <form method="post" action="index.php?url=matriculas_guardar" class="mt-5 grid gap-4 sm:grid-cols-2"><?= campoCsrf() ?><label class="form-label sm:col-span-2">Alumno<select id="matricula-alumno" required name="id_alumno" class="form-input">
                     <option value="">Seleccione un alumno</option><?php foreach ($opciones['alumnos'] as $alumno): ?><option value="<?= $alumno['id_persona'] ?>"><?= htmlspecialchars($alumno['apellidos'] . ', ' . $alumno['nombres'] . ' · ' . $alumno['numero_documento']) ?></option><?php endforeach; ?>
-                </select></label><label class="form-label">Período<select required name="id_periodo" class="form-input">
+                </select><small class="mt-1 block text-xs font-normal text-slate-500">Escriba el nombre, apellido o documento para buscar.</small></label><label class="form-label">Período<select required name="id_periodo" class="form-input">
                     <option value="">Seleccione</option><?php foreach ($opciones['periodos'] as $periodo): ?><option value="<?= $periodo['id_periodo_academico'] ?>"><?= htmlspecialchars($periodo['nombre']) ?></option><?php endforeach; ?>
                 </select></label><label class="form-label">Sección<select required name="id_seccion" class="form-input">
                     <option value="">Seleccione</option><?php foreach ($opciones['secciones'] as $seccion): ?><option value="<?= $seccion['id_seccion'] ?>"><?= htmlspecialchars($seccion['nombre'] . ($seccion['capacidad'] === null ? ' · Sin límite' : ' · ' . $seccion['matriculados'] . '/' . $seccion['capacidad'])) ?></option><?php endforeach; ?>
@@ -68,7 +91,23 @@
                 </select></label><label class="form-label">Parentesco<input name="parentesco" value="Apoderado" class="form-input"></label><div class="flex justify-end gap-2 sm:col-span-2"><button type="button" onclick="document.getElementById('modal-editar-matricula').classList.add('hidden')" class="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-600">Cancelar</button><button class="rounded-xl bg-amber-400 px-4 py-2.5 text-sm font-semibold text-amber-950">Guardar cambios</button></div></form>
     </div>
 </div>
+<script src="<?= BASE_URL ?>assets/js/tom-select.complete.min.js?v=<?= @filemtime(__DIR__ . '/../../../public/assets/js/tom-select.complete.min.js') ?>"></script>
 <script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const selectorAlumno = document.getElementById('matricula-alumno');
+        if (!selectorAlumno || selectorAlumno.tomselect || typeof TomSelect === 'undefined') return;
+
+        new TomSelect(selectorAlumno, {
+            create: false,
+            allowEmptyOption: true,
+            closeAfterSelect: true,
+            maxOptions: 50,
+            placeholder: 'Buscar por nombre o documento...',
+            searchField: ['text'],
+            sortField: { field: 'text', direction: 'asc' }
+        });
+    });
+
     function editarMatricula(boton) {
         document.getElementById('em-id').value = boton.dataset.id;
         document.getElementById('em-periodo').value = boton.dataset.periodo;

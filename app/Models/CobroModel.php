@@ -86,8 +86,12 @@ class CobroModel
             $params[':estado'] = $estado;
         }
         if ($buscar !== '') {
-            $where[] = '(al.nombres LIKE :buscar OR al.apellidos LIKE :buscar OR m.codigo_alumno LIKE :buscar OR al.numero_documento LIKE :buscar)';
-            $params[':buscar'] = '%' . $buscar . '%';
+            $where[] = '(al.nombres LIKE :buscar_nombres OR al.apellidos LIKE :buscar_apellidos OR m.codigo_alumno LIKE :buscar_codigo OR al.numero_documento LIKE :buscar_documento)';
+            $patron = '%' . $buscar . '%';
+            $params[':buscar_nombres'] = $patron;
+            $params[':buscar_apellidos'] = $patron;
+            $params[':buscar_codigo'] = $patron;
+            $params[':buscar_documento'] = $patron;
         }
         if ($where) {
             $sql .= ' WHERE ' . implode(' AND ', $where);
@@ -449,7 +453,7 @@ class CobroModel
 
     public function pagos(): array
     {
-        return $this->db->query("SELECT p.*,CONCAT(COALESCE(a.apellidos,''),', ',COALESCE(a.nombres,'')) AS apoderado,(SELECT COUNT(*) FROM pagos_alumno_detalles d WHERE d.id_pago=p.id_pago) AS deudas,(SELECT GROUP_CONCAT(CONCAT(pm.medio,' S/ ',FORMAT(pm.importe_aplicado,2)) ORDER BY pm.id_pago_medio SEPARATOR ' + ') FROM pagos_alumno_medios pm WHERE pm.id_pago=p.id_pago) AS medios_resumen,(SELECT COALESCE(SUM(pm.vuelto),0) FROM pagos_alumno_medios pm WHERE pm.id_pago=p.id_pago) AS vuelto,(SELECT COUNT(*) FROM pagos_alumno_medios pm WHERE pm.id_pago=p.id_pago AND pm.evidencia_archivo IS NOT NULL) AS evidencias FROM pagos_alumno p LEFT JOIN personas a ON a.id_persona=p.id_apoderado ORDER BY p.fecha_pago DESC,p.id_pago DESC")->fetchAll();
+        return $this->db->query("SELECT p.*,CONCAT(COALESCE(a.apellidos,''),', ',COALESCE(a.nombres,'')) AS apoderado,alumnos.alumno,alumnos.codigos_alumno,(SELECT COUNT(*) FROM pagos_alumno_detalles d WHERE d.id_pago=p.id_pago) AS deudas,(SELECT GROUP_CONCAT(CONCAT(pm.medio,' S/ ',FORMAT(pm.importe_aplicado,2)) ORDER BY pm.id_pago_medio SEPARATOR ' + ') FROM pagos_alumno_medios pm WHERE pm.id_pago=p.id_pago) AS medios_resumen,(SELECT COALESCE(SUM(pm.vuelto),0) FROM pagos_alumno_medios pm WHERE pm.id_pago=p.id_pago) AS vuelto,(SELECT COUNT(*) FROM pagos_alumno_medios pm WHERE pm.id_pago=p.id_pago AND pm.evidencia_archivo IS NOT NULL) AS evidencias FROM pagos_alumno p LEFT JOIN personas a ON a.id_persona=p.id_apoderado LEFT JOIN (SELECT d.id_pago,GROUP_CONCAT(DISTINCT CONCAT(al.apellidos,', ',al.nombres) ORDER BY al.apellidos,al.nombres SEPARATOR ' / ') AS alumno,GROUP_CONCAT(DISTINCT m.codigo_alumno ORDER BY m.codigo_alumno SEPARATOR ', ') AS codigos_alumno FROM pagos_alumno_detalles d INNER JOIN cuentas_cobrar cc ON cc.id_cuenta=d.id_cuenta INNER JOIN matriculas m ON m.id_matricula=cc.id_matricula INNER JOIN personas al ON al.id_persona=m.id_persona GROUP BY d.id_pago) alumnos ON alumnos.id_pago=p.id_pago ORDER BY p.fecha_pago DESC,p.id_pago DESC")->fetchAll();
     }
 
     public function mediosCierres(): array

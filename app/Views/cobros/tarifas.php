@@ -5,22 +5,22 @@
         <h1 class="text-2xl font-bold">Lista de tarifas</h1>
         <p class="mt-1 text-sm text-slate-500">Los importes activos se usan al generar las cuentas por cobrar.</p>
     </div>
-    <div class="flex gap-2"><button onclick="document.getElementById('modal-configurar-tarifas').classList.remove('hidden')" class="rounded-xl border border-blue-200 bg-blue-50 px-4 py-2.5 text-center text-sm font-semibold text-blue-700"><i class="bi bi-sliders"></i> Configurar</button><a href="index.php?url=cobros" class="rounded-xl bg-blue-600 px-4 py-2.5 text-center text-sm font-semibold text-white"><i class="bi bi-arrow-left"></i> Volver a Cobros</a></div>
+    <div class="flex gap-2"><button onclick="document.getElementById('modal-configurar-tarifas').classList.remove('hidden')" class="rounded-xl border border-blue-200 bg-blue-50 px-4 py-2.5 text-center text-sm font-semibold text-blue-700"><i class="bi bi-sliders"></i> Conceptos y Tarifas</button><a href="index.php?url=cobros" class="rounded-xl bg-blue-600 px-4 py-2.5 text-center text-sm font-semibold text-white"><i class="bi bi-arrow-left"></i> Volver a Cobros</a></div>
 </div>
 <section class="mb-5 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
     <div class="border-b border-slate-100 px-5 py-4">
-        <h2 class="font-bold">Conceptos de cobro</h2>
+        <h2 class="font-bold">Conceptos</h2>
         <p class="text-sm text-slate-500">Define qué se cobra y si permite abonos.</p>
     </div>
     <div class="overflow-x-auto">
-        <table class="min-w-full text-left text-sm">
+        <table id="tablaConceptosCobro" data-datatable data-page-options="5,10,25,50" class="min-w-full text-left text-sm">
             <thead class="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
                 <tr>
                     <th class="px-5 py-3">Concepto</th>
                     <th class="px-5 py-3">Tipo</th>
                     <th class="px-5 py-3">Pagos parciales</th>
                     <th class="px-5 py-3">Estado</th>
-                    <th class="px-5 py-3">Acción</th>
+                    <th class="no-sort px-5 py-3">Acción</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-slate-100"><?php foreach ($conceptos as $concepto): ?><tr>
@@ -38,8 +38,12 @@
     </div>
 </section>
 <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+    <div class="border-b border-slate-100 px-5 py-4">
+        <h2 class="font-bold">Tarifas</h2>
+        <p class="text-sm text-slate-500">Define cuanto se cobra, en que periodo, a que grados y la vigencia que tiene.</p>
+    </div>
     <div class="overflow-x-auto">
-        <table id="tablaTarifas" class="min-w-full text-left text-sm">
+        <table id="tablaTarifas" data-datatable data-page-options="5,10,25,50" class="min-w-full text-left text-sm">
             <thead class="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
                 <tr>
                     <th class="px-5 py-4">Concepto</th>
@@ -48,7 +52,7 @@
                     <th class="px-5 py-4">Importe</th>
                     <th class="px-5 py-4">Vigencia</th>
                     <th class="px-5 py-4">Estado</th>
-                    <th class="px-5 py-4">Acción</th>
+                    <th class="no-sort px-5 py-4">Acción</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-slate-100"><?php foreach ($tarifas as $tarifa): ?><tr>
@@ -91,20 +95,3 @@
         </div>
     </div>
 </div>
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        if (window.simpleDatatables && document.querySelector('#tablaTarifas')) new simpleDatatables.DataTable('#tablaTarifas', {
-            perPage: 10,
-            perPageSelect: [5, 10, 25, 50],
-            searchable: true,
-            sortable: true,
-            labels: {
-                placeholder: 'Buscar...',
-                perPage: 'Mostrar',
-                noRows: 'No hay registros',
-                noResults: 'No se encontraron resultados',
-                info: 'Mostrando {start} a {end} de {rows} registros'
-            }
-        })
-    });
-</script>

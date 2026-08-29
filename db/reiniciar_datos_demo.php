@@ -403,6 +403,14 @@ try {
     ejecutarDemo($conexion, "INSERT INTO incidencias_asistencia(id_asistencia,tipo,motivo,estado,registrado_por,resuelto_por,resolucion_observacion,creado_en,resuelto_en) VALUES(?,'LICENCIA','Licencia personal documentada','APROBADA',?,?,?, ?,?)", [$asistencias['ernesto_hoy'],$usuarios['asistencia'],$usuarios['director'],'Licencia autorizada por Dirección.',fechaHoraDemo($ayer,'16:00:00'),fechaHoraDemo($hoy,'07:30:00')]);
     ejecutarDemo($conexion, "INSERT INTO incidencias_asistencia(id_asistencia,tipo,motivo,estado,registrado_por,resuelto_por,resolucion_observacion,creado_en,resuelto_en) VALUES(?,'OBSERVACION','Solicitud sin sustento','RECHAZADA',?,?,?, ?,?)", [$asistencias['patricia_hoy'],$usuarios['planilla'],$usuarios['asistencia'],'Solicitud rechazada por falta de sustento.',fechaHoraDemo($hoy,'10:00:00'),fechaHoraDemo($hoy,'11:00:00')]);
 
+    // Cierres manual y automatico, conservando responsable, proceso y resultado.
+    ejecutarDemo($conexion, "INSERT INTO cierres_asistencia(fecha,alcance,tipo,ejecutado_por,proceso,faltas_generadas,incompletas_generadas,detalle,ejecutado_en) VALUES(?,'ALUMNOS','MANUAL',?,'usuario',1,0,?,?)", [
+        $ayer,$usuarios['asistencia'],json_encode(['faltas_generadas'=>1,'observacion'=>'Cierre manual de demostración'], JSON_UNESCAPED_UNICODE),fechaHoraDemo($ayer,'23:00:00'),
+    ]);
+    ejecutarDemo($conexion, "INSERT INTO cierres_asistencia(fecha,alcance,tipo,ejecutado_por,proceso,faltas_generadas,incompletas_generadas,detalle,ejecutado_en) VALUES(?,'PERSONAL','AUTOMATICO',NULL,'tarea_programada',0,1,?,?)", [
+        $anteayer,json_encode(['faltas_jornada'=>0,'faltas_sesion'=>0,'incompletas'=>1], JSON_UNESCAPED_UNICODE),fechaHoraDemo($anteayer,'23:00:00'),
+    ]);
+
     // Finanzas: conceptos unicos/mensuales, pagos parciales, tarifas generales y por grado.
     $conceptosCobro = [];
     foreach ([
@@ -509,6 +517,14 @@ try {
         [$cierreManana,'EFECTIVO',100,100],[$cierreManana,'TRANSFERENCIA',920,920],
         [$cierreTarde,'EFECTIVO',250,245],[$cierreTarde,'YAPE',80,80],
     ] as $detalleCierre) ejecutarDemo($conexion, 'INSERT INTO cierres_caja_medios(id_cierre,medio,importe_sistema,importe_declarado,diferencia) VALUES(?,?,?,?,?)', [$detalleCierre[0],$detalleCierre[1],$detalleCierre[2],$detalleCierre[3],$detalleCierre[3]-$detalleCierre[2]]);
+
+    // Una rectificacion historica ya resuelta y otra diferencia pendiente para practicar ambos flujos.
+    $rectificacionCaja = insertarDemo($conexion, "INSERT INTO rectificaciones_caja(id_cierre,accion,motivo_tipo,motivo,diferencia_anterior,diferencia_nueva,registrado_por,registrado_en) VALUES(?,'RECTIFICACION','ERROR_CONTEO','Se volvió a contar el efectivo y se corrigió el importe declarado.',-5,0,?,?)", [
+        $cierreManana,$usuarios['director'],fechaHoraDemo($ayer,'12:45:00'),
+    ]);
+    ejecutarDemo($conexion, "INSERT INTO rectificaciones_caja_medios(id_rectificacion,medio,importe_sistema,importe_anterior,importe_nuevo,diferencia_anterior,diferencia_nueva) VALUES(?, 'EFECTIVO',100,95,100,-5,0)", [$rectificacionCaja]);
+    ejecutarDemo($conexion, "INSERT INTO rectificaciones_caja_medios(id_rectificacion,medio,importe_sistema,importe_anterior,importe_nuevo,diferencia_anterior,diferencia_nueva) VALUES(?, 'TRANSFERENCIA',920,920,920,0,0)", [$rectificacionCaja]);
+    ejecutarDemo($conexion, "UPDATE cierres_caja SET estado_revision='RECTIFICADO' WHERE id_cierre=?", [$cierreManana]);
 
     // Planilla: reglas, modalidades, feriado, tardanzas, pagos totales/parciales y anulaciones.
     $reglas = [];

@@ -173,15 +173,15 @@ class PlanillaModel
             $this->db->prepare("DELETE pc FROM planilla_detalle_conceptos pc JOIN planilla_detalles pd ON pd.id_planilla_detalle=pc.id_planilla_detalle WHERE pd.id_periodo_pago=?")->execute([$id]);
             $r = $this->db->prepare("SELECT * FROM reglas_descuento WHERE estado='ACTIVO' AND fecha_inicio<=? AND (fecha_fin IS NULL OR fecha_fin>=?)");
             $r->execute([$p['fecha_fin'], $p['fecha_inicio']]);
-            $detalle = $this->db->prepare("SELECT pd.id_planilla_detalle,pd.monto_base,v.id_persona FROM planilla_detalles pd JOIN vinculos_laborales v ON v.id_vinculo=pd.id_vinculo WHERE pd.id_periodo_pago=?");
+            $detalle = $this->db->prepare("SELECT pd.id_planilla_detalle,pd.monto_base,v.id_persona,v.dias_laborables FROM planilla_detalles pd JOIN vinculos_laborales v ON v.id_vinculo=pd.id_vinculo WHERE pd.id_periodo_pago=?");
             $detalle->execute([$id]);
             foreach ($detalle->fetchAll() as $d) {
                 $des = 0;
                 foreach ($r->fetchAll() as $reg) {
                     $f = json_decode($reg['formula'], true);
                     $campo = $reg['evento'] === 'TARDANZA' ? "COALESCE(SUM(CASE WHEN NOT EXISTS(SELECT 1 FROM incidencias_asistencia ia WHERE ia.id_asistencia=a.id_asistencia AND ia.tipo='JUSTIFICACION_TARDANZA' AND ia.estado='APROBADA') THEN a.minutos_tardanza ELSE 0 END),0)" : ($reg['evento'] === 'FALTA' ? "COALESCE(SUM(a.estado='FALTA'),0)" : '0');
-                    $a = $this->db->prepare("SELECT $campo FROM asistencias_diarias a WHERE a.id_persona=? AND a.fecha BETWEEN ? AND ?");
-                    $a->execute([$d['id_persona'], $p['fecha_inicio'], $p['fecha_fin']]);
+                    $a = $this->db->prepare("SELECT $campo FROM asistencias_diarias a WHERE a.id_persona=? AND a.fecha BETWEEN ? AND ? AND (a.id_carga IS NOT NULL OR (a.id_jornada IS NOT NULL AND FIND_IN_SET(CAST(WEEKDAY(a.fecha)+1 AS CHAR),?)>0))");
+                    $a->execute([$d['id_persona'], $p['fecha_inicio'], $p['fecha_fin'], $d['dias_laborables'] ?: '1,2,3,4,5']);
                     $cant = (float)$a->fetchColumn();
                     $imp = round($cant * (float)($f['monto_unitario'] ?? 0), 2);
                     if ($imp > 0) {

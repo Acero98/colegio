@@ -1,8 +1,4 @@
-<section class="mt-6 flex flex-wrap gap-3">
-    <button type="button" onclick="mostrarPanelJornada('panel-jornada-grupo')" class="inline-flex min-h-11 items-center justify-center rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700"><i class="bi bi-people mr-2"></i>Asignar jornada por grupo</button>
-</section>
-
-<section id="panel-jornada-grupo" data-panel-jornada class="mt-4 hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+<section id="panel-jornada-grupo" data-panel-jornada class="mt-6 hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
     <div>
         <p class="text-sm font-medium text-blue-600">Asignación masiva</p>
         <h2 class="text-lg font-bold">Asignar jornada por grupo</h2>
